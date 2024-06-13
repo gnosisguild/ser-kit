@@ -25,7 +25,7 @@ interface Safe {
   address: `0x${string}`
   prefixedAddress: PrefixedAddress
 
-  chainId: ChainId
+  chain: ChainId
   threshold: number
 }
 
@@ -34,7 +34,7 @@ interface Roles {
   address: `0x${string}`
   prefixedAddress: PrefixedAddress
 
-  chainId: ChainId
+  chain: ChainId
   defaultRole: Map<`0x${string}`, string>
   multisend: `0x${string}`[]
 }
@@ -44,7 +44,7 @@ interface Delay {
   address: `0x${string}`
   prefixedAddress: PrefixedAddress
 
-  chainId: ChainId
+  chain: ChainId
 }
 
 type Contract = Safe | Roles | Delay
@@ -92,4 +92,14 @@ export interface Waypoint {
   connection: Connection
 }
 
-export type Route = [StartingPoint, ...Waypoint[]]
+/** An execution route describes the flow a transaction can take from `from` (the initiating account) to `to` (the account being controlled) */
+export interface Route {
+  /** An id that uniquely identifies this route, calculated deterministically based on its waypoints */
+  id: string
+  /** Address prefixed with "eoa:" or a chain short name identifying the account initiating the transaction */
+  initiator: PrefixedAddress
+  /** Chain-prefixed address of the account being controlled */
+  avatar: PrefixedAddress
+  /** An execution route flows along an arbitrary number of contract waypoints, starting at the signing EOA or initiating smart account and ending at the controlled avatar */
+  waypoints: [StartingPoint, ...Waypoint[]]
+}
