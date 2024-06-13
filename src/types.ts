@@ -86,7 +86,7 @@ interface StartingPoint {
 
 /** An execution route flows along an arbitrary number of contract waypoints ending at the controlled avatar */
 export interface Waypoint {
-  /** A description of the account or module at this waypoint */
+  /** A description of the contract account or module at this waypoint */
   account: Contract
   /** A description of how the previous waypoint is connected to this contract */
   connection: Connection
