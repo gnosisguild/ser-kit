@@ -103,3 +103,15 @@ export interface Route {
   /** An execution route flows along an arbitrary number of contract waypoints, starting at the signing EOA or initiating smart account and ending at the controlled avatar */
   waypoints: [StartingPoint, ...Waypoint[]]
 }
+
+export enum OperationType {
+  Call = 0,
+  DelegateCall = 1,
+}
+
+export interface MetaTransaction {
+  readonly to: `0x${string}`
+  readonly value: bigint
+  readonly data: `0x${string}`
+  readonly operation?: OperationType
+}
