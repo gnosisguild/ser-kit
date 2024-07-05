@@ -14,13 +14,13 @@ export enum AccountType {
   DELAY = 'DELAY',
 }
 
-interface Eoa {
+export interface Eoa {
   type: AccountType.EOA
   address: `0x${string}`
   prefixedAddress: PrefixedAddress
 }
 
-interface Safe {
+export interface Safe {
   type: AccountType.SAFE
   address: `0x${string}`
   prefixedAddress: PrefixedAddress
@@ -29,7 +29,7 @@ interface Safe {
   threshold: number
 }
 
-interface Roles {
+export interface Roles {
   type: AccountType.ROLES
   address: `0x${string}`
   prefixedAddress: PrefixedAddress
@@ -39,7 +39,7 @@ interface Roles {
   multisend: `0x${string}`[]
 }
 
-interface Delay {
+export interface Delay {
   type: AccountType.DELAY
   address: `0x${string}`
   prefixedAddress: PrefixedAddress
@@ -102,16 +102,4 @@ export interface Route {
   avatar: PrefixedAddress
   /** An execution route flows along an arbitrary number of contract waypoints, starting at the signing EOA or initiating smart account and ending at the controlled avatar */
   waypoints: [StartingPoint, ...Waypoint[]]
-}
-
-export enum OperationType {
-  Call = 0,
-  DelegateCall = 1,
-}
-
-export interface MetaTransaction {
-  readonly to: `0x${string}`
-  readonly value: bigint
-  readonly data: `0x${string}`
-  readonly operation?: OperationType
 }

@@ -1,10 +1,13 @@
 import { concat, encodeFunctionData, encodePacked, hexToBytes } from 'viem'
-import { OperationType, type MetaTransaction } from './types'
+import {
+  OperationType,
+  type MetaTransactionData,
+} from '@safe-global/safe-core-sdk-types'
 
 export const encodeMultiSend = (
-  transactions: readonly MetaTransaction[],
+  transactions: readonly MetaTransactionData[],
   preferredAddresses: `0x${string}`[] = []
-) => {
+): MetaTransactionData => {
   if (transactions.length === 0) {
     throw new Error('No transactions to encode')
   }
@@ -15,7 +18,7 @@ export const encodeMultiSend = (
 
   return {
     to: multiSendAddress(transactions, preferredAddresses),
-    value: 0n,
+    value: '0',
     data: encodeMultiSendData(transactions),
     operation: OperationType.DelegateCall,
   }
@@ -38,7 +41,7 @@ const MULTI_SEND_ABI = [
 ] as const
 
 const encodeMultiSendData = (
-  transactions: readonly MetaTransaction[]
+  transactions: readonly MetaTransactionData[]
 ): `0x${string}` => {
   const packedTransactions = transactions.map((tx) =>
     encodePacked(
@@ -46,8 +49,8 @@ const encodeMultiSendData = (
       [
         tx.operation || OperationType.Call,
         tx.to,
-        tx.value,
-        BigInt(hexToBytes(tx.data).length),
+        BigInt(tx.value),
+        BigInt(hexToBytes(tx.data as `0x${string}`).length),
         tx.data,
       ]
     )
@@ -76,7 +79,7 @@ const KNOWN_MULTI_SEND_CALL_ONLY_ADDRESSES = [
 ]
 
 const multiSendAddress = (
-  transactions: readonly MetaTransaction[],
+  transactions: readonly MetaTransactionData[],
   preferredAddresses: `0x${string}`[] = []
 ): `0x${string}` => {
   const callOnly = transactions.every(
@@ -90,6 +93,15 @@ const multiSendAddress = (
         : KNOWN_MULTI_SEND_ADDRESSES
       ).includes(a.toLowerCase())
     ) || preferredAddresses[0]
+
+  if (
+    !callOnly &&
+    KNOWN_MULTI_SEND_CALL_ONLY_ADDRESSES.includes(preferredAddress)
+  ) {
+    throw new Error(
+      `Cannot use MultiSendCallOnly for a batch with DelegateCall transactions`
+    )
+  }
 
   return (
     preferredAddress || (callOnly ? MULTI_SEND_CALLONLY_141 : MULTI_SEND_141)

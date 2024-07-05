@@ -1,4 +1,6 @@
-import { AccountType, ConnectionType, type Route } from './types'
+import { AccountType, ConnectionType, type Route } from '../types'
+
+export * from './rank'
 
 const countExtraSignaturesRequired = (route: Route): number =>
   route.waypoints.reduce<number>((result, waypoint) => {

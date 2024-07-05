@@ -1,5 +1,5 @@
 import { expect, describe, it } from 'bun:test'
-import { OperationType } from './types'
+import { OperationType } from '../types'
 import { encodeMultiSend } from './multisend'
 
 describe('multisend', () => {
