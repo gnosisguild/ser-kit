@@ -1,5 +1,5 @@
 import { encodeMultiSend } from './multisend'
-import { calculateRouteId } from '../query/routes'
+import { calculateRouteId, collapseModifiers } from '../query/routes'
 import {
   AccountType,
   ConnectionType,
@@ -19,6 +19,11 @@ import {
   type ExecutionPlan,
   type SafeTransactionProperties,
 } from './types'
+import {
+  decodeExecTransactionFromModuleData,
+  encodeExecTransactionFromModuleData,
+} from './avatar'
+import { useDefaultRolesForModules } from './roles'
 
 interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
@@ -62,9 +67,13 @@ export const planExecution = async (
     },
   ]
 
+  // pre-processing: simplify route by using default roles for zodiac modules as role members and collapsing modifiers
+  let waypoints = useDefaultRolesForModules(route.waypoints)
+  waypoints = collapseModifiers(waypoints)
+
   // starting from the end, encode the execution path
-  for (let i = route.waypoints.length - 1; i >= 0; i--) {
-    const waypoint = route.waypoints[i]
+  for (let i = waypoints.length - 1; i >= 0; i--) {
+    const waypoint = waypoints[i]
 
     if ('connection' in waypoint) {
       switch (waypoint.connection.type) {
@@ -73,7 +82,7 @@ export const planExecution = async (
           const plan = await planSafeOwnerExecution(
             action,
             waypoint,
-            route.waypoints[i - 1].account,
+            waypoints[i - 1].account,
             options
           )
           // replace the action with the safe exec action(s), keeping the rest of the plan
@@ -82,6 +91,14 @@ export const planExecution = async (
         }
 
         case ConnectionType.IS_ENABLED: {
+          const [action, ...rest] = result
+          const plan = await planSafeModuleExecution(
+            action,
+            waypoint,
+            waypoints[i - 1].account
+          )
+          // replace the action with the safe module exec action(s), keeping the rest of the plan
+          result = [...plan, ...rest]
           continue
         }
 
@@ -214,7 +231,38 @@ const planSafeOwnerExecution = async (
   }
 
   throw new Error(
-    'Can not handle the given action type with a Safe node: ' + request.type
+    'Can not handle the given action type as a Safe owner: ' + request.type
+  )
+}
+
+const planSafeModuleExecution = async (
+  request: ExecutionAction,
+  waypoint: Waypoint,
+  connectedFrom: Account
+): Promise<ExecutionPlan> => {
+  if (request.type === ExecutionActionType.EXECUTE_TRANSACTION) {
+    return [
+      {
+        type: ExecutionActionType.EXECUTE_TRANSACTION,
+        transaction: {
+          to: waypoint.account.address,
+          data: encodeExecTransactionFromModuleData(request.transaction),
+          value: '0',
+        },
+        from: connectedFrom.prefixedAddress,
+      },
+    ]
+  }
+
+  if (
+    request.type === ExecutionActionType.SIGN_MESSAGE ||
+    request.type === ExecutionActionType.SIGN_TYPED_DATA
+  ) {
+    throw new Error('Impossible to sign as a Safe module')
+  }
+
+  throw new Error(
+    'Can not handle the given action type as a Safe module: ' + request.type
   )
 }
 
