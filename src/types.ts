@@ -37,6 +37,7 @@ export interface Roles {
   chain: ChainId
   defaultRole: Map<`0x${string}`, string>
   multisend: `0x${string}`[]
+  version: 1 | 2
 }
 
 export interface Delay {

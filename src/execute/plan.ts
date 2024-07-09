@@ -10,7 +10,7 @@ import {
   type Waypoint,
 } from '../types'
 import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types'
-import { initProtocolKit, type CustomProviders } from './safe'
+import { canSignOffChain, initProtocolKit, type CustomProviders } from './safe'
 import { EthSafeSignature } from '@safe-global/protocol-kit'
 import { encodeApprovedHashSignature } from './signatures'
 import {
@@ -19,11 +19,11 @@ import {
   type ExecutionPlan,
   type SafeTransactionProperties,
 } from './types'
+import { encodeExecTransactionFromModuleData } from './avatar'
 import {
-  decodeExecTransactionFromModuleData,
-  encodeExecTransactionFromModuleData,
-} from './avatar'
-import { useDefaultRolesForModules } from './roles'
+  encodeExecTransactionWithRoleData,
+  useDefaultRolesForModules,
+} from './roles'
 
 interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
@@ -74,40 +74,41 @@ export const planExecution = async (
   // starting from the end, encode the execution path
   for (let i = waypoints.length - 1; i >= 0; i--) {
     const waypoint = waypoints[i]
+    const [action, ...rest] = result
 
     if ('connection' in waypoint) {
       switch (waypoint.connection.type) {
         case ConnectionType.OWNS: {
-          const [action, ...rest] = result
-          const plan = await planSafeOwnerExecution(
-            action,
-            waypoint,
-            waypoints[i - 1].account,
-            options
-          )
-          // replace the action with the safe exec action(s), keeping the rest of the plan
-          result = [...plan, ...rest]
+          result = [
+            ...(await planAsSafeOwner(action, waypoints, i, options)),
+            ...rest,
+          ]
           continue
         }
 
         case ConnectionType.IS_ENABLED: {
-          const [action, ...rest] = result
-          const plan = await planSafeModuleExecution(
-            action,
-            waypoint,
-            waypoints[i - 1].account
-          )
-          // replace the action with the safe module exec action(s), keeping the rest of the plan
-          result = [...plan, ...rest]
+          result = [
+            ...(await planAsSafeModule(
+              action,
+              waypoint,
+              waypoints[i - 1].account
+            )),
+            ...rest,
+          ]
           continue
         }
 
         case ConnectionType.IS_MEMBER: {
-          // TODO choose role:
-          // - use from options?.roles?[waypoint.account.prefixedAddress]
-          // - use waypoint.account.defaultRole
-          // - use the first role in waypoint.connection.roles
-          // TODO route through execTransactionFromModule (previous node is Delay/Roles mod & validate that chosen role === defaultRole) vs execTransactionWithRole (previous node is EOA/Safe)
+          result = [
+            ...(await planAsRoleMember(
+              action,
+              waypoint,
+              waypoints[i - 1].account,
+              options
+            )),
+            ...rest,
+          ]
+
           continue
         }
 
@@ -123,18 +124,24 @@ export const planExecution = async (
   return result
 }
 
-const planSafeOwnerExecution = async (
+const planAsSafeOwner = async (
   request: ExecutionAction,
-  waypoint: Waypoint,
-  connectedFrom: Account,
+  waypoints: Route['waypoints'],
+  index: number,
   options?: Options
 ): Promise<ExecutionPlan> => {
+  const waypoint = waypoints[index]
   if (waypoint.account.type !== AccountType.SAFE) {
     throw new Error(
       'Only Safe accounts can be connected through an OWNS connection'
     )
   }
 
+  const offChainSignaturePossible = canSignOffChain(
+    waypoints.slice(0, index + 1) as Route['waypoints']
+  )
+
+  const connectedFrom = waypoints[index - 1]?.account
   const owner = connectedFrom.address
 
   const safeTransactionProperties =
@@ -149,6 +156,7 @@ const planSafeOwnerExecution = async (
       transactions: [request.transaction],
       options: safeTransactionProperties,
     })
+    const txHash = await protocolKit.getTransactionHash(safeTx)
 
     const canExecute = waypoint.account.threshold === 1
     const proposeOnly = !!safeTransactionProperties?.proposeOnly
@@ -175,10 +183,8 @@ const planSafeOwnerExecution = async (
     }
 
     // sign and propose, but don't execute the transaction
-
-    if (!onchainSignature) {
+    if (offChainSignaturePossible && !onchainSignature) {
       // request a signature from the previous node & propose the transaction via the Safe Transaction Service
-      const txHash = await protocolKit.getTransactionHash(safeTx)
       return [
         {
           type: ExecutionActionType.SIGN_MESSAGE,
@@ -194,7 +200,6 @@ const planSafeOwnerExecution = async (
       ]
     } else {
       // approve the transaction hash on-chain & propose the transaction via the Safe Transaction Service
-      const txHash = await protocolKit.getTransactionHash(safeTx)
       const safeInterface =
         protocolKit.getContractManager().safeContract?.contract.interface
       if (!safeInterface) throw new Error('Could not retrieve Safe interface')
@@ -235,7 +240,7 @@ const planSafeOwnerExecution = async (
   )
 }
 
-const planSafeModuleExecution = async (
+const planAsSafeModule = async (
   request: ExecutionAction,
   waypoint: Waypoint,
   connectedFrom: Account
@@ -258,11 +263,69 @@ const planSafeModuleExecution = async (
     request.type === ExecutionActionType.SIGN_MESSAGE ||
     request.type === ExecutionActionType.SIGN_TYPED_DATA
   ) {
-    throw new Error('Impossible to sign as a Safe module')
+    // TODO use SignMessageLib (via delegatecall) to approve the transaction hash onchain
+    // https://github.com/safe-global/safe-smart-account/blob/499b17ad0191b575fcadc5cb5b8e3faeae5391ae/contracts/libraries/SignMessageLib.sol
+    throw new Error('Not implemented')
   }
 
   throw new Error(
     'Can not handle the given action type as a Safe module: ' + request.type
+  )
+}
+
+const planAsRoleMember = async (
+  request: ExecutionAction,
+  waypoint: Waypoint,
+  connectedFrom: Account,
+  options?: Options
+): Promise<ExecutionPlan> => {
+  if (
+    waypoint.account.type !== AccountType.ROLES ||
+    waypoint.connection.type !== ConnectionType.IS_MEMBER
+  ) {
+    throw new Error(
+      'Expected a Roles accounts connected through an IS_MEMBER connection'
+    )
+  }
+
+  const version = waypoint.account.version
+
+  const role =
+    options?.roles?.[connectedFrom.prefixedAddress] ||
+    waypoint.account.defaultRole.get(connectedFrom.address) ||
+    waypoint.connection.roles[0]
+
+  if (!role) {
+    throw new Error('Could not determine a role')
+  }
+
+  if (request.type === ExecutionActionType.EXECUTE_TRANSACTION) {
+    return [
+      {
+        type: ExecutionActionType.EXECUTE_TRANSACTION,
+        transaction: {
+          to: waypoint.account.address,
+          data: encodeExecTransactionWithRoleData(
+            request.transaction,
+            role,
+            version
+          ),
+          value: '0',
+        },
+        from: connectedFrom.prefixedAddress,
+      },
+    ]
+  }
+
+  if (
+    request.type === ExecutionActionType.SIGN_MESSAGE ||
+    request.type === ExecutionActionType.SIGN_TYPED_DATA
+  ) {
+    throw new Error('Not possible to let Safe sign messages as role member')
+  }
+
+  throw new Error(
+    'Can not handle the given action type as a role member: ' + request.type
   )
 }
 

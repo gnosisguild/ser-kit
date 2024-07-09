@@ -1,8 +1,5 @@
-import {
-  OperationType,
-  type MetaTransactionData,
-} from '@safe-global/safe-core-sdk-types'
-import { decodeFunctionData, encodeFunctionData } from 'viem'
+import { type MetaTransactionData } from '@safe-global/safe-core-sdk-types'
+import { encodeFunctionData } from 'viem'
 
 const AVATAR_ABI = [
   {
@@ -45,30 +42,4 @@ export const encodeExecTransactionFromModuleData = (
       transaction.operation,
     ],
   })
-}
-
-export const decodeExecTransactionFromModuleData = (
-  data: string
-): MetaTransactionData => {
-  const { functionName, args } = decodeFunctionData({
-    abi: AVATAR_ABI,
-    data: data as `0x${string}`,
-  })
-
-  if (functionName !== 'execTransactionFromModule') {
-    throw new Error('Unexpected function name: ' + functionName)
-  }
-  if (!args) {
-    throw new Error('No arguments found')
-  }
-
-  return {
-    to: args[0] as `0x${string}`,
-    value: String(args[1]),
-    data: args[2] as `0x${string}`,
-    operation:
-      BigInt(args[3] as any) === 1n
-        ? OperationType.DelegateCall
-        : OperationType.Call,
-  }
 }

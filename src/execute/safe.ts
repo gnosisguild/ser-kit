@@ -1,5 +1,10 @@
 import Safe, { type Eip1193Provider } from '@safe-global/protocol-kit'
-import type { ChainId, PrefixedAddress } from '../types'
+import {
+  ConnectionType,
+  type ChainId,
+  type PrefixedAddress,
+  type Route,
+} from '../types'
 import { defaultRpc } from '../chains'
 import { parsePrefixedAddress } from '../addresses'
 
@@ -16,4 +21,13 @@ export const initProtocolKit = async (
     provider: providers[chainId] || defaultRpc[chainId],
     safeAddress,
   })
+}
+
+/** Returns true if the giving (sub) route is executable with off-chain signatures */
+export const canSignOffChain = (waypoints: Route['waypoints']) => {
+  return waypoints.every(
+    (waypoint) =>
+      !('connection' in waypoint) ||
+      waypoint.connection.type !== ConnectionType.OWNS
+  )
 }
