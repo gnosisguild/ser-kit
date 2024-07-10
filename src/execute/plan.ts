@@ -24,6 +24,7 @@ import {
   encodeExecTransactionWithRoleData,
   useDefaultRolesForModules,
 } from './roles'
+import { parsePrefixedAddress } from '../addresses'
 
 interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
@@ -59,11 +60,19 @@ export const planExecution = async (
     options?.multiSend ? [options.multiSend] : lastRolesAccount?.multisend
   )
 
+  const [avatarChain] = parsePrefixedAddress(route.avatar)
+  if (!avatarChain) {
+    throw new Error(
+      `Invalid prefixed address for route avatar: ${route.avatar}`
+    )
+  }
+
   let result: ExecutionPlan = [
     {
       type: ExecutionActionType.EXECUTE_TRANSACTION,
       transaction,
       from: route.avatar,
+      chain: avatarChain,
     },
   ]
 
@@ -178,6 +187,7 @@ const planAsSafeOwner = async (
             value: '0',
           },
           from: connectedFrom.prefixedAddress,
+          chain: waypoint.account.chain,
         },
       ]
     }
@@ -212,6 +222,7 @@ const planAsSafeOwner = async (
             value: '0',
           },
           from: connectedFrom.prefixedAddress,
+          chain: waypoint.account.chain,
         },
         {
           type: ExecutionActionType.PROPOSE_SAFE_TRANSACTION,
@@ -255,6 +266,7 @@ const planAsSafeModule = async (
           value: '0',
         },
         from: connectedFrom.prefixedAddress,
+        chain: waypoint.account.chain,
       },
     ]
   }
@@ -313,6 +325,7 @@ const planAsRoleMember = async (
           value: '0',
         },
         from: connectedFrom.prefixedAddress,
+        chain: waypoint.account.chain,
       },
     ]
   }

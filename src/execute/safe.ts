@@ -17,6 +17,8 @@ export const initProtocolKit = async (
   providers: CustomProviders = {}
 ) => {
   const [chainId, safeAddress] = parsePrefixedAddress(safe)
+  if (!chainId) throw new Error(`invalid prefixed address for a Safe: ${safe}`)
+
   return await Safe.init({
     provider: providers[chainId] || defaultRpc[chainId],
     safeAddress,

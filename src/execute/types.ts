@@ -18,7 +18,7 @@ export enum ExecutionActionType {
 export interface ExecuteTransactionAction {
   type: ExecutionActionType.EXECUTE_TRANSACTION
   transaction: MetaTransactionData
-  from?: PrefixedAddress
+  from: PrefixedAddress
 }
 
 /** Represents a signature to be produced for the given message by the specified account */
