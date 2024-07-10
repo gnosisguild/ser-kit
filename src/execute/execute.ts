@@ -5,7 +5,11 @@ import {
   type Eip1193Provider,
 } from '@safe-global/protocol-kit'
 
-import { ExecutionActionType, type ExecutionPlan } from './types'
+import {
+  ExecutionActionType,
+  type ExecutionPlan,
+  type ExecutionState,
+} from './types'
 import { parsePrefixedAddress } from '../addresses'
 import type { ChainId, PrefixedAddress } from '../types'
 import { chains, defaultRpc } from '../chains'
@@ -13,22 +17,26 @@ import { initProtocolKit } from './safe'
 import EthSafeTransaction from '@safe-global/protocol-kit/dist/src/utils/transactions/SafeTransaction'
 import SafeApiKit from '@safe-global/api-kit'
 
+/**
+ * Executes the given plan, continuing from the given state. Mutates the state array to track execution progress.
+ *
+ * Throws if the execution of any action fails, for example due to the user rejecting a wallet request.
+ * The mutated state array can then be used to resume execution from the last successful action.
+ */
 export const execute = async (
   plan: ExecutionPlan,
+  state: ExecutionState = [],
   provider: Eip1193Provider
 ) => {
-  // tracks transaction hashes, produced signatures, or safe transaction hashes (depending on the action type)
-  const result = [] as `0x${string}`[]
-  // track the last produced signature so it can be used for the next action
-  let output: `0x${string}` | null = null
+  for (let i = state.length; i < plan.length; i++) {
+    const action = plan[i]
 
-  for (let action of plan) {
     switch (action.type) {
       case ExecutionActionType.EXECUTE_TRANSACTION: {
         const { from, chain } = action
         const walletClient = getWalletClient({ account: from, chain, provider })
 
-        result.push(
+        state.push(
           await walletClient.sendTransaction({
             to: action.transaction.to as `0x${string}`,
             value: BigInt(action.transaction.value),
@@ -40,19 +48,19 @@ export const execute = async (
       case ExecutionActionType.SIGN_MESSAGE: {
         const { from, message } = action
         const walletClient = getWalletClient({ account: from, provider })
-        output = await walletClient.signMessage({ message })
-        result.push(output)
+        state.push(await walletClient.signMessage({ message }))
         break
       }
       case ExecutionActionType.SIGN_TYPED_DATA: {
         const { from, data } = action
         const walletClient = getWalletClient({ account: from, provider })
-        output = await walletClient.signTypedData(data)
-        result.push(output)
+        state.push(await walletClient.signTypedData(data))
         break
       }
       case ExecutionActionType.PROPOSE_SAFE_TRANSACTION: {
         const { safe, safeTransaction, signature, from } = action
+        const previousOutput = state[i - 1]
+
         const [chainId, safeAddress] = parsePrefixedAddress(safe)
         if (!chainId)
           throw new Error(
@@ -62,7 +70,7 @@ export const execute = async (
         const [ownerChainId, ownerAddress] = parsePrefixedAddress(from)
         const isContractSignature = ownerChainId !== undefined
 
-        if (!signature || !output) {
+        if (!signature || !previousOutput) {
           throw new Error(
             'Signature is required for proposing the Safe transaction'
           )
@@ -70,7 +78,11 @@ export const execute = async (
 
         const ownerSignature =
           signature ||
-          new EthSafeSignature(ownerAddress, output, isContractSignature)
+          new EthSafeSignature(
+            ownerAddress,
+            previousOutput,
+            isContractSignature
+          )
 
         const protocolKit = await initProtocolKit(safe)
         const signedSafeTransaction = new EthSafeTransaction(safeTransaction)
@@ -87,13 +99,12 @@ export const execute = async (
           senderAddress: ownerAddress,
           senderSignature: buildSignatureBytes([ownerSignature]),
         })
-        result.push(safeTxHash as `0x${string}`)
+
+        state.push(safeTxHash as `0x${string}`)
         break
       }
     }
   }
-
-  return result
 }
 
 const getWalletClient = ({

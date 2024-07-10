@@ -72,6 +72,14 @@ export type ExecutionAction =
  **/
 export type ExecutionPlan = [ExecutionAction, ...ExecutionAction[]]
 
+/**
+ * An execution state is a list of transaction hashes, signatures, or Safe transaction hashes that have been produced as part
+ * of executing an execution plan. It's used to track the progress of the execution plan.
+ * The state entry indexes are correlated to the respective action indexes in the execution plan.
+ * An incomplete execution is represented through a state with fewer entries than the plan.
+ */
+export type ExecutionState = `0${string}`[]
+
 export interface SafeTransactionProperties
   extends SafeTransactionOptionalProps {
   /** If a Safe transaction is executable, only approve/propose the transaction, but don't execute it. Anyone will be able to trigger execution. */
