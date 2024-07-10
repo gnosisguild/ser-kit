@@ -194,9 +194,11 @@ const planAsSafeOwner = async (
         },
         {
           type: ExecutionActionType.PROPOSE_SAFE_TRANSACTION,
+          safe: waypoint.account.prefixedAddress,
           safeTransaction: safeTx.data,
           // the signature produced from the above sign message action will be inserted here during execution of the plan
           signature: null,
+          from: waypoint.connection.from,
         },
       ]
     } else {
@@ -217,11 +219,13 @@ const planAsSafeOwner = async (
         },
         {
           type: ExecutionActionType.PROPOSE_SAFE_TRANSACTION,
+          safe: waypoint.account.prefixedAddress,
           safeTransaction: safeTx.data,
           signature: new EthSafeSignature(
             owner,
             encodeApprovedHashSignature(owner)
           ),
+          from: waypoint.connection.from,
         },
       ]
     }

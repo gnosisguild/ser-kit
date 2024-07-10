@@ -1,11 +1,11 @@
 import type {
-  EIP712TypedData,
   MetaTransactionData,
   SafeSignature,
   SafeTransactionData,
 } from '@safe-global/safe-core-sdk-types'
-import type { PrefixedAddress } from '../types'
+import type { ChainId, PrefixedAddress } from '../types'
 import type { SafeTransactionOptionalProps } from '@safe-global/protocol-kit'
+import type { TypedDataDomain } from 'viem'
 
 export enum ExecutionActionType {
   EXECUTE_TRANSACTION = 'EXECUTE_TRANSACTION',
@@ -19,28 +19,43 @@ export interface ExecuteTransactionAction {
   type: ExecutionActionType.EXECUTE_TRANSACTION
   transaction: MetaTransactionData
   from: PrefixedAddress
+  chain: ChainId
 }
 
 /** Represents a signature to be produced for the given message by the specified account */
 export interface SignMessageAction {
   type: ExecutionActionType.SIGN_MESSAGE
   message: string
-  from?: PrefixedAddress
+  from: PrefixedAddress
+}
+
+interface TypedDataField {
+  name: string
+  type: string
+}
+
+interface EIP712TypedData {
+  domain: TypedDataDomain
+  types: Record<string, Array<TypedDataField>>
+  message: Record<string, unknown>
+  primaryType: string
 }
 
 /** Represents a signature to be produced for the given typed data object by the specified account */
 export interface SignTypedDataAction {
   type: ExecutionActionType.SIGN_TYPED_DATA
   data: EIP712TypedData
-  from?: PrefixedAddress
+  from: PrefixedAddress
 }
 
 /** Represents an action for the given Safe transaction to be proposed for execution to the Safe Transaction Service */
 export interface ProposeSafeTransactionAction {
   type: ExecutionActionType.PROPOSE_SAFE_TRANSACTION
+  safe: PrefixedAddress
   safeTransaction: SafeTransactionData
   /** If set to null, the previous action's output will be inserted as signature */
   signature: SafeSignature | null
+  from: PrefixedAddress
 }
 
 export type ExecutionAction =
