@@ -63,15 +63,18 @@ export enum ConnectionType {
 
 interface OwnsConnection {
   type: ConnectionType.OWNS
+  from: PrefixedAddress
 }
 
 interface IsEnabledConnection {
   type: ConnectionType.IS_ENABLED
+  from: PrefixedAddress
 }
 
 interface IsMemberConnection {
   type: ConnectionType.IS_MEMBER
   roles: string[]
+  from: PrefixedAddress
 }
 
 export type Connection =

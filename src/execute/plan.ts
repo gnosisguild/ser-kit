@@ -96,25 +96,13 @@ export const planExecution = async (
         }
 
         case ConnectionType.IS_ENABLED: {
-          result = [
-            ...(await planAsSafeModule(
-              action,
-              waypoint,
-              waypoints[i - 1].account
-            )),
-            ...rest,
-          ]
+          result = [...(await planAsSafeModule(action, waypoint)), ...rest]
           continue
         }
 
         case ConnectionType.IS_MEMBER: {
           result = [
-            ...(await planAsRoleMember(
-              action,
-              waypoint,
-              waypoints[i - 1].account,
-              options
-            )),
+            ...(await planAsRoleMember(action, waypoint, options)),
             ...rest,
           ]
 
@@ -140,18 +128,21 @@ const planAsSafeOwner = async (
   options?: Options
 ): Promise<ExecutionPlan> => {
   const waypoint = waypoints[index]
-  if (waypoint.account.type !== AccountType.SAFE) {
+  if (
+    waypoint.account.type !== AccountType.SAFE ||
+    !('connection' in waypoint) ||
+    waypoint.connection.type !== ConnectionType.OWNS
+  ) {
     throw new Error(
-      'Only Safe accounts can be connected through an OWNS connection'
+      'Expected a Safe account connected through an OWNS connection'
     )
   }
+
+  const [_chain, owner] = parsePrefixedAddress(waypoint.connection.from)
 
   const offChainSignaturePossible = canSignOffChain(
     waypoints.slice(0, index + 1) as Route['waypoints']
   )
-
-  const connectedFrom = waypoints[index - 1]?.account
-  const owner = connectedFrom.address
 
   const safeTransactionProperties =
     options?.safeTransactionProperties?.[waypoint.account.prefixedAddress]
@@ -186,7 +177,7 @@ const planAsSafeOwner = async (
             data: await protocolKit.getEncodedTransaction(safeTx),
             value: '0',
           },
-          from: connectedFrom.prefixedAddress,
+          from: waypoint.connection.from,
           chain: waypoint.account.chain,
         },
       ]
@@ -199,7 +190,7 @@ const planAsSafeOwner = async (
         {
           type: ExecutionActionType.SIGN_MESSAGE,
           message: txHash,
-          from: connectedFrom.prefixedAddress,
+          from: waypoint.connection.from,
         },
         {
           type: ExecutionActionType.PROPOSE_SAFE_TRANSACTION,
@@ -221,7 +212,7 @@ const planAsSafeOwner = async (
             data: safeInterface.encodeFunctionData('approveHash', [txHash]),
             value: '0',
           },
-          from: connectedFrom.prefixedAddress,
+          from: waypoint.connection.from,
           chain: waypoint.account.chain,
         },
         {
@@ -253,8 +244,7 @@ const planAsSafeOwner = async (
 
 const planAsSafeModule = async (
   request: ExecutionAction,
-  waypoint: Waypoint,
-  connectedFrom: Account
+  waypoint: Waypoint
 ): Promise<ExecutionPlan> => {
   if (request.type === ExecutionActionType.EXECUTE_TRANSACTION) {
     return [
@@ -265,7 +255,7 @@ const planAsSafeModule = async (
           data: encodeExecTransactionFromModuleData(request.transaction),
           value: '0',
         },
-        from: connectedFrom.prefixedAddress,
+        from: waypoint.connection.from,
         chain: waypoint.account.chain,
       },
     ]
@@ -288,7 +278,6 @@ const planAsSafeModule = async (
 const planAsRoleMember = async (
   request: ExecutionAction,
   waypoint: Waypoint,
-  connectedFrom: Account,
   options?: Options
 ): Promise<ExecutionPlan> => {
   if (
@@ -296,15 +285,17 @@ const planAsRoleMember = async (
     waypoint.connection.type !== ConnectionType.IS_MEMBER
   ) {
     throw new Error(
-      'Expected a Roles accounts connected through an IS_MEMBER connection'
+      'Expected a Roles account connected through an IS_MEMBER connection'
     )
   }
 
   const version = waypoint.account.version
 
+  const [_chain, memberAddress] = parsePrefixedAddress(waypoint.connection.from)
+
   const role =
-    options?.roles?.[connectedFrom.prefixedAddress] ||
-    waypoint.account.defaultRole.get(connectedFrom.address) ||
+    options?.roles?.[waypoint.connection.from] ||
+    waypoint.account.defaultRole.get(memberAddress) ||
     waypoint.connection.roles[0]
 
   if (!role) {
@@ -324,7 +315,7 @@ const planAsRoleMember = async (
           ),
           value: '0',
         },
-        from: connectedFrom.prefixedAddress,
+        from: waypoint.connection.from,
         chain: waypoint.account.chain,
       },
     ]
