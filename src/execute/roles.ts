@@ -83,9 +83,9 @@ export const encodeExecTransactionWithRoleData = (
         abi: ROLES_V1_ABI,
         functionName: 'execTransactionWithRole',
         args: [
-          transaction.to,
+          transaction.to as `0x${string}`,
           BigInt(transaction.value),
-          transaction.data,
+          transaction.data as `0x${string}`,
           transaction.operation || 0,
           Number(role),
           true,
@@ -95,11 +95,11 @@ export const encodeExecTransactionWithRoleData = (
         abi: ROLES_V2_ABI,
         functionName: 'execTransactionWithRole',
         args: [
-          transaction.to,
+          transaction.to as `0x${string}`,
           BigInt(transaction.value),
-          transaction.data,
+          transaction.data as `0x${string}`,
           transaction.operation || 0,
-          role,
+          role as `0x${string}`,
           true,
         ],
       })

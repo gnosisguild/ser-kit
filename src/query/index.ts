@@ -1,5 +1,7 @@
 import type { PrefixedAddress, Route } from '../types'
 
+export { calculateRouteId } from './routes'
+
 const SER_API_BASE = 'https://ser.gnosisguild.org/api/v1'
 
 const fetchRoutes = async (url: string): Promise<Route[]> => {
