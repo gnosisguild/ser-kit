@@ -13,7 +13,7 @@ export const formatPrefixedAddress = (
   }
 
   const prefix = chain ? chain.shortName : 'eoa'
-  return `${prefix}:${address.toLowerCase()}`
+  return `${prefix}:${address.toLowerCase()}` as PrefixedAddress
 }
 
 export const parsePrefixedAddress = (prefixedAddress: PrefixedAddress) => {
