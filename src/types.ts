@@ -74,6 +74,7 @@ interface IsEnabledConnection {
 interface IsMemberConnection {
   type: ConnectionType.IS_MEMBER
   roles: string[]
+  defaultRole?: string
   from: PrefixedAddress
 }
 

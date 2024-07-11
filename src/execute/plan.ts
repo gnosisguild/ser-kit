@@ -3,7 +3,6 @@ import { calculateRouteId, collapseModifiers } from '../query/routes'
 import {
   AccountType,
   ConnectionType,
-  type Account,
   type PrefixedAddress,
   type Roles,
   type Route,
@@ -30,7 +29,7 @@ interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
   roles?: { [rolesMod: PrefixedAddress]: string }
   /** Allows overriding the default transaction properties for any Safe node in the route that is connected through an OWNS connection. */
-  safeTransactionProperties: {
+  safeTransactionProperties?: {
     [safe: PrefixedAddress]: SafeTransactionProperties
   }
   providers?: CustomProviders
@@ -299,7 +298,7 @@ const planAsRoleMember = async (
 
   const role =
     options?.roles?.[waypoint.connection.from] ||
-    waypoint.account.defaultRole.get(memberAddress) ||
+    waypoint.connection.defaultRole ||
     waypoint.connection.roles[0]
 
   if (!role) {

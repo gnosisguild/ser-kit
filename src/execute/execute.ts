@@ -4,6 +4,8 @@ import {
   EthSafeSignature,
   type Eip1193Provider,
 } from '@safe-global/protocol-kit'
+import EthSafeTransaction from '@safe-global/protocol-kit/dist/src/utils/transactions/SafeTransaction'
+import SafeApiKit from '@safe-global/api-kit'
 
 import {
   ExecutionActionType,
@@ -14,8 +16,6 @@ import { parsePrefixedAddress } from '../addresses'
 import type { ChainId, PrefixedAddress } from '../types'
 import { chains, defaultRpc } from '../chains'
 import { initProtocolKit } from './safe'
-import EthSafeTransaction from '@safe-global/protocol-kit/dist/src/utils/transactions/SafeTransaction'
-import SafeApiKit from '@safe-global/api-kit'
 
 /**
  * Executes the given plan, continuing from the given state. Mutates the state array to track execution progress.
@@ -70,7 +70,7 @@ export const execute = async (
         const [ownerChainId, ownerAddress] = parsePrefixedAddress(from)
         const isContractSignature = ownerChainId !== undefined
 
-        if (!signature || !previousOutput) {
+        if (!signature && !previousOutput) {
           throw new Error(
             'Signature is required for proposing the Safe transaction'
           )

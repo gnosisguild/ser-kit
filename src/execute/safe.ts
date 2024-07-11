@@ -30,6 +30,6 @@ export const canSignOffChain = (waypoints: Route['waypoints']) => {
   return waypoints.every(
     (waypoint) =>
       !('connection' in waypoint) ||
-      waypoint.connection.type !== ConnectionType.OWNS
+      waypoint.connection.type === ConnectionType.OWNS
   )
 }

@@ -123,9 +123,7 @@ export const useDefaultRolesForModules = (waypoints: Route['waypoints']) =>
       'connection' in waypoint &&
       waypoint.connection.type === ConnectionType.IS_MEMBER
     ) {
-      const defaultRole = waypoint.account.defaultRole.get(
-        previousAccount.address
-      )
+      const { defaultRole } = waypoint.connection
 
       if (!defaultRole) {
         throw new Error(

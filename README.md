@@ -39,8 +39,16 @@ const result = execute(actions, provider)
 
 ## Contributing
 
+### Prerequisites
+
+#### bun
+
 This project uses [Bun](https://bun.sh), a fast all-in-one JavaScript runtime.
 To install bun follow the instructions at https://bun.sh/docs/installation.
+
+#### anvil
+
+Install through `foundryup`: https://book.getfoundry.sh/getting-started/installation#using-foundryup
 
 To install project dependencies:
 
