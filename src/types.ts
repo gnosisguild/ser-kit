@@ -35,7 +35,6 @@ export interface Roles {
   prefixedAddress: PrefixedAddress
 
   chain: ChainId
-  defaultRole: Map<`0x${string}`, string>
   multisend: `0x${string}`[]
   version: 1 | 2
 }
@@ -84,7 +83,7 @@ export type Connection =
   | IsMemberConnection
 
 /** An execution route starts with the signing EOA or initiating smart contract account. */
-interface StartingPoint {
+export interface StartingPoint {
   /** The account that is used as the signer or initiator of the transaction */
   account: Account
 }

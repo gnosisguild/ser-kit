@@ -48,10 +48,10 @@ const encodeMultiSendData = (
       ['uint8', 'address', 'uint256', 'uint256', 'bytes'],
       [
         tx.operation || OperationType.Call,
-        tx.to,
+        tx.to as `0x${string}`,
         BigInt(tx.value),
         BigInt(hexToBytes(tx.data as `0x${string}`).length),
-        tx.data,
+        tx.data as `0x${string}`,
       ]
     )
   )
