@@ -1,19 +1,21 @@
 {
   "name": "ser-kit",
-  "version": "0.3.4",
+  "version": "0.3.8",
   "author": "Gnosis Guild",
   "license": "LGPL-3.0",
   "homepage": "https://github.com/gnosisguild/ser-kit",
   "packageManager": "bun@1.1.12",
   "main": "dist/index.js",
+  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "files": [
     "dist",
+    "src",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "bun run build.mjs",
+    "build": "rimraf dist && tsup --format esm,cjs",
     "prepublishOnly": "bun run build",
     "check:format": "prettier --list-different .",
     "fix:format": "prettier --write .",
@@ -25,6 +27,8 @@
     "@types/wait-on": "^5.3.4",
     "bun-plugin-dts": "^0.2.3",
     "prettier": "^3.3.2",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.1.0",
     "typescript": "^5.4.5",
     "wait-on": "^7.2.0"
   },
