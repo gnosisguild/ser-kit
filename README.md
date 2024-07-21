@@ -34,8 +34,13 @@ const bestRoute = rankedRoutes[0]
 const actions = planExecution(metaTx, bestRoute)
 
 // 4. execute these actions using the provided EIP-1193 provider
-const result = execute(actions, provider)
+const state = [] // mutable execution state
+const result = execute(actions, state, provider)
 ```
+
+The `execute` function sequentially executes the actions using the given provider.
+It updates the given state array in place, so that the outcome of the action at index `i` is written at `state[i]`.
+If execution fails half-way through the plan, the partial state can be passed as input when retrying so execution is picked at from that point on.
 
 ## Contributing
 

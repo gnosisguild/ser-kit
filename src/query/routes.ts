@@ -1,5 +1,10 @@
 import { hexToBytes, sha256 } from 'viem'
-import { ConnectionType, type Route, type Waypoint } from '../types'
+import {
+  AccountType,
+  ConnectionType,
+  type Route,
+  type Waypoint,
+} from '../types'
 
 const CONNECTION_TYPE_IDS = [
   ConnectionType.OWNS,
@@ -42,10 +47,11 @@ export const collapseModifiers = (
   waypoints: Route['waypoints']
 ): Route['waypoints'] =>
   waypoints.filter((waypoint, index) => {
-    const next = waypoints[index + 1] as Waypoint | undefined
+    const prev = waypoints[index - 1] as Waypoint | undefined
     return (
       !('connection' in waypoint) ||
       waypoint.connection.type !== ConnectionType.IS_ENABLED ||
-      next?.connection.type !== ConnectionType.IS_ENABLED
+      !prev ||
+      ![AccountType.ROLES, AccountType.DELAY].includes(prev.account.type)
     )
   }) as Route['waypoints']
