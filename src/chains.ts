@@ -10,12 +10,12 @@ export const chains = [
 ] as const
 
 export const defaultRpc = {
-  [1]: 'https://mainnet.gateway.tenderly.co',
-  [10]: 'https://optimism.gateway.tenderly.co',
-  [100]: 'https://rpc.gnosis.gateway.fm',
-  [11155111]: 'https://sepolia.gateway.tenderly.co',
-  [137]: 'https://polygon.gateway.tenderly.co',
-  [42161]: 'https://arbitrum.gateway.tenderly.co',
-  [43114]: 'https://rpc.ankr.com/avalanche',
-  [8453]: 'https://base.gateway.tenderly.co',
+  [1]: 'https://airlock.gnosisguild.org/api/v1/1/rpc',
+  [10]: 'https://airlock.gnosisguild.org/api/v1/10/rpc',
+  [100]: 'https://airlock.gnosisguild.org/api/v1/100/rpc',
+  [137]: 'https://airlock.gnosisguild.org/api/v1/137/rpc',
+  [8453]: 'https://airlock.gnosisguild.org/api/v1/8453/rpc',
+  [42161]: 'https://airlock.gnosisguild.org/api/v1/42161/rpc',
+  [43114]: 'https://airlock.gnosisguild.org/api/v1/43114/rpc',
+  [11155111]: 'https://airlock.gnosisguild.org/api/v1/11155111/rpc',
 } as const
