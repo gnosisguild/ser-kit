@@ -8,11 +8,18 @@ import {
   type Route,
   type Waypoint,
 } from '../types'
-import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types'
+import type {
+  MetaTransactionData,
+  SafeEIP712Args,
+} from '@safe-global/safe-core-sdk-types'
 import { canSignOffChain, initProtocolKit, type CustomProviders } from './safe'
-import { EthSafeSignature } from '@safe-global/protocol-kit'
+import {
+  EthSafeSignature,
+  generateTypedData as generateTypedDataBase,
+} from '@safe-global/protocol-kit'
 import { encodeApprovedHashSignature } from './signatures'
 import {
+  EIP712TypedData,
   ExecutionActionType,
   type ExecutionAction,
   type ExecutionPlan,
@@ -24,6 +31,7 @@ import {
   useDefaultRolesForModules,
 } from './roles'
 import { parsePrefixedAddress } from '../addresses'
+import { getAddress } from 'viem'
 
 interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
@@ -155,7 +163,6 @@ const planAsSafeOwner = async (
       transactions: [request.transaction],
       options: safeTransactionProperties,
     })
-    const txHash = await protocolKit.getTransactionHash(safeTx)
 
     const canExecute = waypoint.account.threshold === 1
     const proposeOnly = !!safeTransactionProperties?.proposeOnly
@@ -185,10 +192,16 @@ const planAsSafeOwner = async (
     // sign and propose, but don't execute the transaction
     if (offChainSignaturePossible && !onchainSignature) {
       // request a signature from the previous node & propose the transaction via the Safe Transaction Service
+      const typedData = generateTypedData({
+        safeAddress: getAddress(waypoint.account.address),
+        safeVersion: await protocolKit.getContractVersion(),
+        chainId: BigInt(waypoint.account.chain),
+        data: safeTx.data,
+      })
       return [
         {
-          type: ExecutionActionType.SIGN_MESSAGE,
-          message: txHash,
+          type: ExecutionActionType.SIGN_TYPED_DATA,
+          data: typedData,
           from: waypoint.connection.from,
         },
         {
@@ -205,6 +218,7 @@ const planAsSafeOwner = async (
       const safeInterface =
         protocolKit.getContractManager().safeContract?.contract.interface
       if (!safeInterface) throw new Error('Could not retrieve Safe interface')
+      const txHash = await protocolKit.getTransactionHash(safeTx)
       return [
         {
           type: ExecutionActionType.EXECUTE_TRANSACTION,
@@ -220,10 +234,7 @@ const planAsSafeOwner = async (
           type: ExecutionActionType.PROPOSE_SAFE_TRANSACTION,
           safe: waypoint.account.prefixedAddress,
           safeTransaction: safeTx.data,
-          signature: new EthSafeSignature(
-            owner,
-            encodeApprovedHashSignature(owner)
-          ),
+          signature: encodeApprovedHashSignature(owner),
           from: waypoint.connection.from,
         },
       ]
@@ -293,8 +304,6 @@ const planAsRoleMember = async (
   }
 
   const version = waypoint.account.version
-
-  const [_chain, memberAddress] = parsePrefixedAddress(waypoint.connection.from)
 
   const role =
     options?.roles?.[waypoint.connection.from] ||
@@ -371,4 +380,20 @@ export const splitExecutableSegments = (route: Route): Route[] => {
     })
   }
   return segments
+}
+
+function generateTypedData(args: SafeEIP712Args): EIP712TypedData {
+  const typedData = generateTypedDataBase(args)
+
+  return {
+    ...typedData,
+    types: typedData.types as any,
+    domain: {
+      ...typedData.domain,
+      chainId: typedData.domain.chainId
+        ? Number(typedData.domain.chainId)
+        : undefined,
+      verifyingContract: typedData.domain.verifyingContract as `0x${string}`,
+    },
+  }
 }

@@ -34,9 +34,9 @@ interface TypedDataField {
   type: string
 }
 
-interface EIP712TypedData {
+export interface EIP712TypedData {
   domain: TypedDataDomain
-  types: Record<string, Array<TypedDataField>>
+  types: Record<string, TypedDataField[]>
   message: Record<string, unknown>
   primaryType: string
 }
@@ -54,7 +54,7 @@ export interface ProposeSafeTransactionAction {
   safe: PrefixedAddress
   safeTransaction: SafeTransactionData
   /** If set to null, the previous action's output will be inserted as signature */
-  signature: SafeSignature | null
+  signature: `0x${string}` | null
   from: PrefixedAddress
 }
 

@@ -1,7 +1,8 @@
-import { createWalletClient, custom, defineChain } from 'viem'
+import { createWalletClient, custom, defineChain, getAddress } from 'viem'
 import {
   buildSignatureBytes,
   EthSafeSignature,
+  SigningMethod,
   type Eip1193Provider,
 } from '@safe-global/protocol-kit'
 import EthSafeTransaction from '@safe-global/protocol-kit/dist/src/utils/transactions/SafeTransaction'
@@ -16,6 +17,7 @@ import { parsePrefixedAddress } from '../addresses'
 import type { ChainId, PrefixedAddress } from '../types'
 import { chains, defaultRpc } from '../chains'
 import { initProtocolKit } from './safe'
+import { adjustVInSignature } from '@safe-global/protocol-kit/dist/src/utils'
 
 /**
  * Executes the given plan, continuing from the given state. Mutates the state array to track execution progress.
@@ -47,18 +49,33 @@ export const execute = async (
       }
       case ExecutionActionType.SIGN_MESSAGE: {
         const { from, message } = action
+        const [, signerAddress] = parsePrefixedAddress(from)
         const walletClient = getWalletClient({ account: from, provider })
-        state.push(await walletClient.signMessage({ message }))
+        const signature = await walletClient.signMessage({ message })
+        state.push(
+          adjustVInSignature(
+            SigningMethod.ETH_SIGN,
+            signature,
+            message,
+            signerAddress
+          ) as `0x${string}`
+        )
         break
       }
       case ExecutionActionType.SIGN_TYPED_DATA: {
         const { from, data } = action
         const walletClient = getWalletClient({ account: from, provider })
-        state.push(await walletClient.signTypedData(data))
+        const signature = await walletClient.signTypedData(data)
+        state.push(
+          adjustVInSignature(
+            SigningMethod.ETH_SIGN_TYPED_DATA,
+            signature
+          ) as `0x${string}`
+        )
         break
       }
       case ExecutionActionType.PROPOSE_SAFE_TRANSACTION: {
-        const { safe, safeTransaction, signature, from } = action
+        const { safe, safeTransaction: safeTransactionData, from } = action
         const previousOutput = state[i - 1]
 
         const [chainId, safeAddress] = parsePrefixedAddress(safe)
@@ -70,34 +87,42 @@ export const execute = async (
         const [ownerChainId, ownerAddress] = parsePrefixedAddress(from)
         const isContractSignature = ownerChainId !== undefined
 
-        if (!signature && !previousOutput) {
+        if (action.signature && previousOutput) {
+          console.warn(
+            '`PROPOSE_SAFE_TRANSACTION` action already has a signature, ignoring previous action output'
+          )
+        }
+        let signature = action.signature || previousOutput
+        if (!signature) {
           throw new Error(
             'Signature is required for proposing the Safe transaction'
           )
         }
 
-        const ownerSignature =
-          signature ||
-          new EthSafeSignature(
-            ownerAddress,
-            previousOutput,
-            isContractSignature
-          )
-
         const protocolKit = await initProtocolKit(safe)
-        const signedSafeTransaction = new EthSafeTransaction(safeTransaction)
-        signedSafeTransaction.addSignature(ownerSignature)
-        const safeTxHash = await protocolKit.getTransactionHash(
-          signedSafeTransaction
+        const safeTransaction = new EthSafeTransaction(safeTransactionData)
+        const safeTxHash = await protocolKit.getTransactionHash(safeTransaction)
+
+        const safeSignature = new EthSafeSignature(
+          ownerAddress,
+          previousOutput,
+          isContractSignature
         )
+        safeTransaction.addSignature(safeSignature)
 
         const apiKit = new SafeApiKit({ chainId: BigInt(chainId) })
         await apiKit.proposeTransaction({
           safeAddress,
-          safeTransactionData: signedSafeTransaction.data,
+          safeTransactionData: {
+            ...safeTransaction.data,
+            // The Safe tx service requires checksummed addresses
+            to: getAddress(safeTransaction.data.to),
+            // The Safe tx service requires decimal values
+            value: BigInt(safeTransaction.data.value).toString(10),
+          },
           safeTxHash,
           senderAddress: ownerAddress,
-          senderSignature: buildSignatureBytes([ownerSignature]),
+          senderSignature: safeSignature.data,
         })
 
         state.push(safeTxHash as `0x${string}`)
