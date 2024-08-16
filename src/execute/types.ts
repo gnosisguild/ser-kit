@@ -78,7 +78,7 @@ export type ExecutionPlan = [ExecutionAction, ...ExecutionAction[]]
  * The state entry indexes are correlated to the respective action indexes in the execution plan.
  * An incomplete execution is represented through a state with fewer entries than the plan.
  */
-export type ExecutionState = `0${string}`[]
+export type ExecutionState = `0x${string}`[]
 
 export interface SafeTransactionProperties
   extends SafeTransactionOptionalProps {
