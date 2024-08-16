@@ -28,7 +28,8 @@ import { adjustVInSignature } from '@safe-global/protocol-kit/dist/src/utils'
 export const execute = async (
   plan: ExecutionPlan,
   state: ExecutionState = [],
-  provider: Eip1193Provider
+  provider: Eip1193Provider,
+  { origin }: { origin?: string } = {}
 ) => {
   for (let i = state.length; i < plan.length; i++) {
     const action = plan[i]
@@ -123,6 +124,7 @@ export const execute = async (
           safeTxHash,
           senderAddress: ownerAddress,
           senderSignature: safeSignature.data,
+          origin,
         })
 
         state.push(safeTxHash as `0x${string}`)
