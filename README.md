@@ -5,7 +5,7 @@ Companion library for ser, the smart execution router.
 Features:
 
 - query execution routes from ser
-- rank execution routes for choosing the most frictionless alternative
+- rank execution routes for choosing the most frictionless option
 - encode calls through a given execution route
 
 ## Concepts
@@ -38,9 +38,13 @@ const state = [] // mutable execution state
 const result = execute(actions, state, provider)
 ```
 
+ser-kit uses two phases, planning and execution. Planning yields a sequence of action (see `ExecutionAction` type).
+This indirection allows giving users a sense all steps required for execution before prompting for the first signature.
+It also allows customization of indi
+
 The `execute` function sequentially executes the actions using the given provider.
 It updates the given state array in place, so that the outcome of the action at index `i` is written at `state[i]`.
-If execution fails half-way through the plan, the partial state can be passed as input when retrying so execution is picked at from that point on.
+If execution fails half-way through the plan, the partial state can be passed as input when retrying so execution is picked up again from that point on.
 
 ## Contributing
 
