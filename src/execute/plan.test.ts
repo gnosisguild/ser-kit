@@ -1,12 +1,7 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test'
-import * as safeApiKit from '@safe-global/api-kit'
-import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types'
-import type { Eip1193Provider } from '@safe-global/protocol-kit'
-import { execute } from './execute'
-import { testClient } from '../../test/client'
+import { describe, it, expect } from 'bun:test'
+
 import { planExecution } from './plan'
-import { parsePrefixedAddress } from '../addresses'
-import { testEao, testRoutes } from '../../test/routes'
+
 import { AccountType, ConnectionType } from '../types'
 import { ExecutionActionType } from './types'
 
@@ -85,4 +80,12 @@ describe('plan', () => {
       },
     ])
   })
+
+  it('should plan: EOA --owns--> SAFE1/1', async () => {})
+
+  it('should plan: EOA --owns--> SAFE1/1 --owns--> SAFE1/1', async () => {})
+
+  it('should plan: EOA --owns--> SAFE1/1 --enabled--> SAFE*/*', async () => {})
+
+  it('should plan: EOA --member--> ROLES --enabled--> DELAY --enabled--> SAFE*/*', async () => {})
 })
