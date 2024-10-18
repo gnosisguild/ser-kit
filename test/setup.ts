@@ -1,6 +1,7 @@
 import { beforeAll } from 'bun:test'
 import waitOn from 'wait-on'
-import { anvilUrl } from './client'
+import { anvilUrl, deployer, testClient } from './client'
+import { parseEther } from 'viem'
 
 beforeAll(async () => {
   // global setup
@@ -17,5 +18,12 @@ async function waitForNetwork() {
       return status === 405
     },
   })
+
+  await testClient.reset()
+  await testClient.request({
+    method: 'anvil_setBalance' as any,
+    params: [deployer.address, parseEther('100')],
+  })
+
   console.log('Fork is ready!')
 }
