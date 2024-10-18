@@ -1,9 +1,18 @@
+import assert from 'assert'
 import { describe, it, expect } from 'bun:test'
+import { Address, getAddress, toHex } from 'viem'
+import { Eip1193Provider } from '@safe-global/protocol-kit'
+import { OperationType } from '@safe-global/safe-core-sdk-types'
 
 import { planExecution } from './plan'
 
+import { testClient } from '../../test/client'
+import { deploySafe, encodeSafeTransaction } from '../../test/avatar'
 import { AccountType, ConnectionType } from '../types'
 import { ExecutionActionType } from './types'
+
+const makeAddress = (number: number): Address =>
+  getAddress(toHex(number, { size: 20 }))
 
 describe('plan', () => {
   it('should correctly plan execution through a role', async () => {
@@ -81,7 +90,79 @@ describe('plan', () => {
     ])
   })
 
-  it('should plan: EOA --owns--> SAFE1/1', async () => {})
+  it('should plan: EOA --owns--> SAFE1/1', async () => {
+    const eoa = makeAddress(3)
+    const safe = await deploySafe({
+      owners: [eoa],
+      threshold: 1,
+      creationNonce: 0,
+    })
+    const receiver = makeAddress(5)
+
+    const metaTransaction = {
+      data: '0xaabbccdd',
+      operation: OperationType.Call,
+      to: receiver,
+      value: '0',
+    }
+
+    const plan = await planExecution(
+      [metaTransaction],
+      {
+        waypoints: [
+          {
+            account: {
+              type: AccountType.EOA,
+              prefixedAddress: `eth:${eoa}`,
+              address: eoa,
+            },
+          },
+          {
+            account: {
+              type: AccountType.SAFE,
+              prefixedAddress: `eth:${safe}`,
+              address: safe,
+              chain: 1,
+              threshold: 1,
+            },
+            connection: {
+              type: ConnectionType.OWNS,
+              from: `eth:${eoa}`,
+            },
+          },
+        ],
+        id: 'test',
+        initiator: `eth:${eoa}`,
+        avatar: `eth:${safe}`,
+      },
+      { providers: { '1': testClient as Eip1193Provider } }
+    )
+
+    expect(plan).toHaveLength(1)
+    const [step] = plan
+    expect(step.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
+
+    assert('chain' in step)
+    const { chain, from, transaction } = step
+
+    expect(from).toEndWith(eoa)
+    expect(chain).toEqual(testClient.chain.id)
+
+    const blankSignature = toHex(0, { size: 65 })
+    const encodedSafeTx = encodeSafeTransaction({
+      transaction: metaTransaction,
+      signatures: blankSignature,
+    })
+    expect(transaction.to).toEqual(safe)
+    expect(transaction.value).toEqual('0')
+    expect(transaction.data.length).toEqual(encodedSafeTx.length)
+
+    // length encoded 65 bytes
+    const sigLength = 32 * 2 + 65 * 2
+    expect(transaction.data.slice(0, -sigLength)).toEqual(
+      encodedSafeTx.slice(0, -sigLength)
+    )
+  })
 
   it('should plan: EOA --owns--> SAFE1/1 --owns--> SAFE1/1', async () => {})
 
