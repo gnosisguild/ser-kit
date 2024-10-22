@@ -82,8 +82,14 @@ export type ExecutionState = `0x${string}`[]
 
 export interface SafeTransactionProperties
   extends SafeTransactionOptionalProps {
-  /** If a Safe transaction is executable, only approve/propose the transaction, but don't execute it. Anyone will be able to trigger execution. */
+  /**
+   * If a Safe transaction is executable, only approve/propose the transaction,
+   * but don't execute it. Anyone will be able to trigger execution.
+   **/
   proposeOnly?: boolean
-  /** In case the Safe signature can be submitted off-chain, still approve the signature on-chain */
+  /**
+   * In case the Safe signature can be submitted off-chain, still approve it
+   * on-chain
+   **/
   onchainSignature?: boolean
 }

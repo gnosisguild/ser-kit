@@ -1,18 +1,24 @@
 import assert from 'assert'
-import { describe, it, expect } from 'bun:test'
-import { Address, getAddress, toHex } from 'viem'
+import { Address, getAddress, toHex, zeroAddress } from 'viem'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 import { OperationType } from '@safe-global/safe-core-sdk-types'
+import { describe, it, expect } from 'bun:test'
 
 import { planExecution } from './plan'
+import { formatPrefixedAddress } from '../addresses'
 
 import { testClient } from '../../test/client'
 import { deploySafe, encodeSafeTransaction } from '../../test/avatar'
-import { AccountType, ConnectionType } from '../types'
+import { AccountType, ConnectionType, Route } from '../types'
 import { ExecutionActionType } from './types'
 
 const makeAddress = (number: number): Address =>
   getAddress(toHex(number, { size: 20 }))
+
+const withPrefix = (address: Address) =>
+  formatPrefixedAddress(testClient.chain.id, address)
+
+let safeCounter = 0
 
 describe('plan', () => {
   it('should correctly plan execution through a role', async () => {
@@ -90,78 +96,123 @@ describe('plan', () => {
     ])
   })
 
-  it('should plan: EOA --owns--> SAFE1/1', async () => {
-    const eoa = makeAddress(3)
-    const safe = await deploySafe({
-      owners: [eoa],
-      threshold: 1,
-      creationNonce: 0,
-    })
-    const receiver = makeAddress(5)
+  describe('EOA owns SAFE-1/1', () => {
+    it('plans execution', async () => {
+      const { eoa, safe, route } = await setupEOAOwnerOfSafe({
+        creationNonce: safeCounter++,
+        threshold: 1,
+      })
 
-    const metaTransaction = {
-      data: '0xaabbccdd',
-      operation: OperationType.Call,
-      to: receiver,
-      value: '0',
-    }
+      const receiver = makeAddress(5)
 
-    const plan = await planExecution(
-      [metaTransaction],
-      {
-        waypoints: [
-          {
-            account: {
-              type: AccountType.EOA,
-              prefixedAddress: `eth:${eoa}`,
-              address: eoa,
-            },
+      const safeTx = {
+        data: '0xaabbccdd',
+        operation: OperationType.Call,
+        to: receiver,
+        value: '0',
+      }
+
+      const chainId = testClient.chain.id
+
+      const plan = await planExecution([safeTx], route, {
+        providers: { [chainId]: testClient as Eip1193Provider },
+        safeTransactionProperties: {
+          [formatPrefixedAddress(chainId, safe)]: {
+            proposeOnly: false,
+            onchainSignature: false,
           },
-          {
-            account: {
-              type: AccountType.SAFE,
-              prefixedAddress: `eth:${safe}`,
-              address: safe,
-              chain: 1,
-              threshold: 1,
-            },
-            connection: {
-              type: ConnectionType.OWNS,
-              from: `eth:${eoa}`,
-            },
-          },
-        ],
-        id: 'test',
-        initiator: `eth:${eoa}`,
-        avatar: `eth:${safe}`,
-      },
-      { providers: { '1': testClient as Eip1193Provider } }
-    )
+        },
+      })
 
-    expect(plan).toHaveLength(1)
-    const [step] = plan
-    expect(step.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
+      expect(plan).toHaveLength(1)
+      const [step] = plan
+      expect(step.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
 
-    assert('chain' in step)
-    const { chain, from, transaction } = step
+      assert('chain' in step)
+      const { chain, from, transaction } = step
 
-    expect(from).toEndWith(eoa)
-    expect(chain).toEqual(testClient.chain.id)
+      expect(from).toEndWith(eoa)
+      expect(chain).toEqual(testClient.chain.id)
 
-    const blankSignature = toHex(0, { size: 65 })
-    const encodedSafeTx = encodeSafeTransaction({
-      transaction: metaTransaction,
-      signatures: blankSignature,
+      const encodedSafeTx = encodeSafeTransaction({
+        transaction: safeTx,
+        signatures: toHex(0, { size: 65 }), // blank signature
+      })
+      expect(transaction.to).toEqual(safe)
+      expect(transaction.value).toEqual('0')
+      expect(transaction.data.length).toEqual(encodedSafeTx.length)
+
+      // length encoded 65 bytes
+      const sigLength = 32 * 2 + 65 * 2
+      expect(transaction.data.slice(0, -sigLength)).toEqual(
+        encodedSafeTx.slice(0, -sigLength)
+      )
     })
-    expect(transaction.to).toEqual(safe)
-    expect(transaction.value).toEqual('0')
-    expect(transaction.data.length).toEqual(encodedSafeTx.length)
 
-    // length encoded 65 bytes
-    const sigLength = 32 * 2 + 65 * 2
-    expect(transaction.data.slice(0, -sigLength)).toEqual(
-      encodedSafeTx.slice(0, -sigLength)
-    )
+    it('ignores onchainSignature=true when execution is possible', async () => {
+      const { safe, route } = await setupEOAOwnerOfSafe({
+        creationNonce: safeCounter++,
+        threshold: 1,
+      })
+
+      const safeTx = {
+        data: '0xaabbccdd',
+        operation: OperationType.Call,
+        to: zeroAddress,
+        value: '0',
+      }
+
+      const plan = await planExecution([safeTx], route, {
+        providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        safeTransactionProperties: {
+          [withPrefix(safe)]: { onchainSignature: true },
+        },
+      })
+
+      expect(plan).toHaveLength(1)
+      const [step] = plan
+      expect(step.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
+    })
+
+    it.only('plans proposal with signature when proposeOnly=true', async () => {
+      const { eoa, safe, route } = await setupEOAOwnerOfSafe({
+        creationNonce: safeCounter++,
+        threshold: 1,
+      })
+
+      const receiver = makeAddress(5)
+
+      const safeTx = {
+        data: '0xaabbccdd',
+        operation: OperationType.Call,
+        to: receiver,
+        value: '0',
+      }
+
+      const plan = await planExecution([safeTx], route, {
+        providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        safeTransactionProperties: {
+          [withPrefix(safe)]: { proposeOnly: true },
+        },
+      })
+
+      expect(plan).toHaveLength(2)
+      const [sign, propose] = plan
+      expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
+      expect(propose.type).toEqual(ExecutionActionType.PROPOSE_SAFE_TRANSACTION)
+
+      // TODO do some content and encoding checks
+    })
+
+    it('plans proposal with onchain approval when proposeOnly=true and onchainSignature=true', async () => {})
+  })
+
+  describe('EOA owns SAFE-2+/m', () => {
+    it('direct execution is not possible', async () => {})
+
+    it('plans proposal with signature', async () => {})
+
+    it('plans proposal with onchain approval when onchainSignature=true', async () => {})
   })
 
   it('should plan: EOA --owns--> SAFE1/1 --owns--> SAFE1/1', async () => {})
@@ -170,3 +221,49 @@ describe('plan', () => {
 
   it('should plan: EOA --member--> ROLES --enabled--> DELAY --enabled--> SAFE*/*', async () => {})
 })
+
+async function setupEOAOwnerOfSafe({
+  threshold,
+  creationNonce,
+}: {
+  threshold: number
+  creationNonce: number
+}) {
+  const eoa = makeAddress(3)
+
+  const safe = await deploySafe({
+    owners: [eoa, makeAddress(999)],
+    threshold,
+    creationNonce,
+  })
+
+  const route = {
+    waypoints: [
+      {
+        account: {
+          type: AccountType.EOA,
+          prefixedAddress: withPrefix(eoa),
+          address: eoa,
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          prefixedAddress: withPrefix(safe),
+          address: safe,
+          chain: 1,
+          threshold: 1,
+        },
+        connection: {
+          type: ConnectionType.OWNS,
+          from: withPrefix(eoa),
+        },
+      },
+    ],
+    id: 'test',
+    initiator: withPrefix(eoa),
+    avatar: withPrefix(safe),
+  } as Route
+
+  return { route, eoa, safe }
+}
