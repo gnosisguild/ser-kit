@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, mock } from 'bun:test'
 import * as safeApiKit from '@safe-global/api-kit'
-import type { MetaTransactionData } from '@safe-global/safe-core-sdk-types'
 import type { Eip1193Provider } from '@safe-global/protocol-kit'
+import type { MetaTransactionData } from '@safe-global/types-kit'
+
 import { execute } from './execute'
 import { testClient } from '../../test/client'
 import { planExecution } from './plan'

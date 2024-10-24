@@ -1,11 +1,12 @@
+import type { TypedDataDomain } from 'viem'
 import type {
   MetaTransactionData,
-  SafeSignature,
   SafeTransactionData,
-} from '@safe-global/safe-core-sdk-types'
-import type { ChainId, PrefixedAddress } from '../types'
+} from '@safe-global/types-kit'
+
 import type { SafeTransactionOptionalProps } from '@safe-global/protocol-kit'
-import type { TypedDataDomain } from 'viem'
+
+import type { ChainId, PrefixedAddress } from '../types'
 
 export enum ExecutionActionType {
   EXECUTE_TRANSACTION = 'EXECUTE_TRANSACTION',

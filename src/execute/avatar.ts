@@ -1,45 +1,31 @@
-import { type MetaTransactionData } from '@safe-global/safe-core-sdk-types'
-import { encodeFunctionData } from 'viem'
+import { encodeFunctionData, Hash, Hex, parseAbi } from 'viem'
+import { type MetaTransactionData } from '@safe-global/types-kit'
 
-const AVATAR_ABI = [
-  {
-    type: 'function',
-    name: 'execTransactionFromModule',
-    constant: false,
-    payable: false,
-    inputs: [
-      {
-        type: 'address',
-        name: 'to',
-      },
-      {
-        type: 'uint256',
-        name: 'value',
-      },
-      {
-        type: 'bytes',
-        name: 'data',
-      },
-      {
-        type: 'uint8',
-        name: 'operation',
-      },
-    ],
-    outputs: [],
-  },
-]
+const avatarAbi = parseAbi([
+  'function approveHash(bytes32 hashToApprove)',
+  'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures) payable returns (bool success)',
+  'function execTransactionFromModule(address to, uint256 value, bytes data, uint8 operation) returns (bool success)',
+])
+
+export const encodeApproveHashData = (hashToApprove: Hash): Hex => {
+  return encodeFunctionData({
+    abi: avatarAbi,
+    functionName: 'approveHash',
+    args: [hashToApprove],
+  })
+}
 
 export const encodeExecTransactionFromModuleData = (
   transaction: MetaTransactionData
-): `0x${string}` => {
+): Hex => {
   return encodeFunctionData({
-    abi: AVATAR_ABI,
+    abi: avatarAbi,
     functionName: 'execTransactionFromModule',
     args: [
       transaction.to,
       BigInt(transaction.value),
-      transaction.data,
-      transaction.operation,
+      transaction.data as Hex,
+      transaction.operation!,
     ],
   })
 }

@@ -1,9 +1,13 @@
 import assert from 'assert'
-import { getAddress } from 'viem'
+import { getAddress, Hash } from 'viem'
 import {
   EthSafeSignature,
   generateTypedData as generateTypedDataBase,
 } from '@safe-global/protocol-kit'
+import type {
+  MetaTransactionData,
+  SafeEIP712Args,
+} from '@safe-global/types-kit'
 
 import { encodeMultiSend } from './multisend'
 import { calculateRouteId, collapseModifiers } from '../query/routes'
@@ -15,10 +19,7 @@ import {
   type Route,
   type Waypoint,
 } from '../types'
-import type {
-  MetaTransactionData,
-  SafeEIP712Args,
-} from '@safe-global/safe-core-sdk-types'
+
 import { initProtocolKit, type CustomProviders } from './safe'
 
 import { encodeApprovedHashSignature } from './signatures'
@@ -29,7 +30,10 @@ import {
   type ExecutionPlan,
   type SafeTransactionProperties,
 } from './types'
-import { encodeExecTransactionFromModuleData } from './avatar'
+import {
+  encodeApproveHashData,
+  encodeExecTransactionFromModuleData,
+} from './avatar'
 import { encodeExecTransactionWithRoleData } from './roles'
 import { parsePrefixedAddress } from '../addresses'
 import { canSignOffChain, useDefaultRolesForModules } from '../waypoints'
@@ -227,16 +231,13 @@ const planAsSafeOwner = async (
     assert(shouldProposeWithApproval == true)
 
     // approve the transaction hash on-chain & propose the transaction via the Safe Transaction Service
-    const safeInterface =
-      protocolKit.getContractManager().safeContract?.contract.interface
-    if (!safeInterface) throw new Error('Could not retrieve Safe interface')
-    const txHash = await protocolKit.getTransactionHash(safeTx)
+    const txHash = (await protocolKit.getTransactionHash(safeTx)) as Hash
     return [
       {
         type: ExecutionActionType.EXECUTE_TRANSACTION,
         transaction: {
           to: waypoint.account.address,
-          data: safeInterface.encodeFunctionData('approveHash', [txHash]),
+          data: encodeApproveHashData(txHash),
           value: '0',
         },
         from: waypoint.connection.from,

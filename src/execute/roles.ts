@@ -1,5 +1,5 @@
-import { type MetaTransactionData } from '@safe-global/safe-core-sdk-types'
 import { encodeFunctionData } from 'viem'
+import { type MetaTransactionData } from '@safe-global/types-kit'
 
 const ROLES_V1_ABI = [
   {

@@ -1,10 +1,10 @@
-import { getAddress } from 'viem'
+import { Address, getAddress } from 'viem'
 import { chains } from './chains'
 import type { ChainId, PrefixedAddress } from './types'
 
 export const formatPrefixedAddress = (
   chainId: ChainId | undefined,
-  address: `0x${string}`
+  address: Address
 ) => {
   const chain = chainId && chains.find((chain) => chain.chainId === chainId)
 

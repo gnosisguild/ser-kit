@@ -1,8 +1,9 @@
 import assert from 'assert'
-import { Address, getAddress, toHex, zeroAddress } from 'viem'
-import { Eip1193Provider } from '@safe-global/protocol-kit'
-import { OperationType } from '@safe-global/safe-core-sdk-types'
 import { describe, it, expect } from 'bun:test'
+import { Address, getAddress, toHex } from 'viem'
+
+import { Eip1193Provider } from '@safe-global/protocol-kit'
+import { OperationType } from '@safe-global/types-kit'
 
 import { planExecution } from './plan'
 import { formatPrefixedAddress } from '../addresses'

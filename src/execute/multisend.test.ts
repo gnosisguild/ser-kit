@@ -1,6 +1,7 @@
 import { expect, describe, it } from 'bun:test'
+import { OperationType } from '@safe-global/types-kit'
+
 import { encodeMultiSend } from './multisend'
-import { OperationType } from '@safe-global/safe-core-sdk-types'
 
 describe('multisend', () => {
   describe('encodeMultiSend', () => {

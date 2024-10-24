@@ -12,17 +12,17 @@ import type {
   Eip1193Provider,
   PredictedSafeProps,
 } from '@safe-global/protocol-kit'
-import {
-  getCompatibilityFallbackHandlerDeployment,
-  getProxyFactoryDeployment,
-  getSafeSingletonDeployment,
-} from '@safe-global/safe-deployments'
 import Safe from '@safe-global/protocol-kit'
 import {
   MetaTransactionData,
   OperationType,
   SafeVersion,
-} from '@safe-global/safe-core-sdk-types'
+} from '@safe-global/types-kit'
+import {
+  getCompatibilityFallbackHandlerDeployment,
+  getProxyFactoryDeployment,
+  getSafeSingletonDeployment,
+} from '@safe-global/safe-deployments'
 import { deployer, testClient } from './client'
 
 export async function deploySafe({

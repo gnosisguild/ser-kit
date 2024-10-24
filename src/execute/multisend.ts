@@ -1,8 +1,5 @@
 import { concat, encodeFunctionData, encodePacked, hexToBytes } from 'viem'
-import {
-  OperationType,
-  type MetaTransactionData,
-} from '@safe-global/safe-core-sdk-types'
+import { OperationType, type MetaTransactionData } from '@safe-global/types-kit'
 
 export const encodeMultiSend = (
   transactions: readonly MetaTransactionData[],
