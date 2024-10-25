@@ -35,7 +35,7 @@ export async function deploySafe({
   threshold: number
   creationNonce: number
   safeVersion?: SafeVersion
-}) {
+}): Promise<Address> {
   const address = await calculateAddress({
     owners,
     threshold,
