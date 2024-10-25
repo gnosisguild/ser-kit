@@ -13,6 +13,7 @@ export enum ExecutionActionType {
   SIGN_MESSAGE = 'SIGN_MESSAGE',
   SIGN_TYPED_DATA = 'SIGN_TYPED_DATA',
   PROPOSE_SAFE_TRANSACTION = 'PROPOSE_SAFE_TRANSACTION',
+  EXECUTE_SAFE_TRANSACTION = 'EXECUTE_SAFE_TRANSACTION',
 }
 
 /** Represents a transaction to be sent from the specified account */
@@ -59,11 +60,21 @@ export interface ProposeSafeTransactionAction {
   from: PrefixedAddress
 }
 
+export interface ExecuteSafeTransactionAction {
+  type: ExecutionActionType.EXECUTE_SAFE_TRANSACTION
+  safe: PrefixedAddress
+  safeTransaction: SafeTransactionData
+  /** If set to null, the previous action's output will be inserted as signature */
+  signature: `0x${string}` | null
+  from: PrefixedAddress
+}
+
 export type ExecutionAction =
   | ExecuteTransactionAction
   | SignMessageAction
   | SignTypedDataAction
   | ProposeSafeTransactionAction
+  | ExecuteSafeTransactionAction
 
 /**
  * An execution plan describes the actions that need to happen to get a given transaction executed through a given route.
