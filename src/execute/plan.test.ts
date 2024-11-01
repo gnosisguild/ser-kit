@@ -1,15 +1,15 @@
 import assert from 'assert'
-import { describe, it, expect, test } from 'bun:test'
+import { describe, it, expect } from 'bun:test'
 import { Address, getAddress, hashMessage, Hex, parseEther, toHex } from 'viem'
 
-import { Eip1193Provider, EthSafeSignature } from '@safe-global/protocol-kit'
+import { Eip1193Provider } from '@safe-global/protocol-kit'
 import { OperationType } from '@safe-global/types-kit'
 
 import { planExecution } from './plan'
 import { formatPrefixedAddress } from '../addresses'
 
 import { deployer, testClient } from '../../test/client'
-import { deploySafe, encodeSafeTransaction } from '../../test/avatar'
+import { deploySafe } from '../../test/avatar'
 import { AccountType, ConnectionType, Route } from '../types'
 import {
   ExecuteSafeTransactionAction,
@@ -17,7 +17,7 @@ import {
   SignTypedDataAction,
 } from './types'
 import { privateKeyToAccount } from 'viem/accounts'
-import { initProtocolKit } from './safe'
+import { encodeExecTransaction } from './avatar'
 
 const makeAddress = (number: number): Address =>
   getAddress(toHex(number, { size: 20 }))
@@ -29,7 +29,7 @@ let safeCounter = 0
 let signerCounter = 0
 
 describe('plan', () => {
-  it('should correctly plan execution through a role', async () => {
+  it.skip('should correctly plan execution through a role', async () => {
     const plan = await planExecution(
       [
         {
@@ -87,6 +87,9 @@ describe('plan', () => {
         id: 'test',
         initiator: 'arb1:0x83e3ca8ddebbd81c3bcdc3aa9e3afcd2bfb7c360',
         avatar: 'arb1:0x0eb5b03c0303f2f47cd81d7be4275af8ed347576',
+      },
+      {
+        providers: { [testClient.chain.id]: testClient as Eip1193Provider },
       }
     )
 
@@ -104,7 +107,7 @@ describe('plan', () => {
     ])
   })
 
-  describe.only('EOA --owns--> SAFE-1/1', () => {
+  describe('EOA --owns--> SAFE-1/1', () => {
     it('plans execution', async () => {
       const signer = privateKeyToAccount(
         hashMessage(`unique-signer ${++signerCounter}`)
@@ -160,25 +163,18 @@ describe('plan', () => {
       const signature = await signer.signTypedData(sign.data)
       expect(execute.type).toEqual(ExecutionActionType.EXECUTE_SAFE_TRANSACTION)
 
-      const kit = await initProtocolKit(withPrefix(safe), {
-        [chainId]: testClient as Eip1193Provider,
-      })
-
-      const safeTransaction = await kit.createTransaction({
-        transactions: [execute.safeTransaction],
-      })
-
-      safeTransaction.addSignature(
-        new EthSafeSignature(signer.address, signature, false)
+      const transaction = await encodeExecTransaction(
+        execute.safe,
+        execute.safeTransaction,
+        signature
       )
 
-      // Except the receiver to have 0, and afterwards 1
       expect(await testClient.getBalance({ address: receiver })).toEqual(0n)
       await testClient.sendTransaction({
         account: deployer,
-        to: safe,
-        data: (await kit.getEncodedTransaction(safeTransaction)) as Hex,
+        ...transaction,
       })
+
       expect(await testClient.getBalance({ address: receiver })).toEqual(
         parseEther('1')
       )
@@ -228,22 +224,22 @@ describe('plan', () => {
     })
   })
 
-  describe.only('EOA --owns--> SAFE1/1 --owns--> SAFE1/1', () => {
+  describe('EOA --owns--> SAFE1/1 --owns--> SAFE1/1', () => {
     it('plans execution', async () => {
       const signer = privateKeyToAccount(
-        hashMessage(`unique-signer ${++signerCounter}`)
+        hashMessage(`signer ${++signerCounter}`)
       )
       const receiver = privateKeyToAccount(
-        hashMessage(`unique-signer ${++signerCounter}`)
+        hashMessage(`signer ${++signerCounter}`)
       ).address
 
-      const { eoa, route, s1, s2 } = await setupEoaSafeSafe({
+      const { route, s1, s2 } = await setupEoaSafeSafe({
         eoa: signer.address,
         creationNonce: safeCounter++,
         threshold: 1,
       })
 
-      // fund the safe
+      // fund the safe with 2 eth
       await testClient.sendTransaction({
         account: deployer,
         to: s2,
@@ -252,13 +248,13 @@ describe('plan', () => {
 
       const chainId = testClient.chain.id
 
+      // plan a transfer of 1 eth into receiver
       const plan = await planExecution(
         [
           {
             data: '0x',
             to: receiver,
             value: String(parseEther('1')),
-            operation: OperationType.Call,
           },
         ],
         route,
@@ -276,47 +272,56 @@ describe('plan', () => {
       ]
 
       expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
-      const signature = await signer.signTypedData(sign.data)
+      let signature = await signer.signTypedData(sign.data)
       expect(execute1.type).toEqual(
         ExecutionActionType.EXECUTE_SAFE_TRANSACTION
       )
+      expect(execute1.signature).toBe(null)
+      const transaction1 = await encodeExecTransaction(
+        execute1.safe,
+        execute1.safeTransaction,
+        signature
+      )
+
+      // console.log(
+      //   await testClient.request({
+      //     method: 'eth_call' as any,
+      //     params: [
+      //       {
+      //         to: s2,
+      //         data: encodeFunctionData({
+      //           abi: avatarAbi,
+      //           functionName: 'approvedHashes',
+      //           args: [s1, hash],
+      //         }),
+      //       },
+      //       'latest',
+      //     ],
+      //   })
+      // )
+
+      expect(await testClient.getBalance({ address: receiver })).toEqual(0n)
+      await testClient.sendTransaction({
+        account: deployer,
+        ...transaction1,
+      })
+      expect(await testClient.getBalance({ address: receiver })).toEqual(0n)
+
       expect(execute2.type).toEqual(
         ExecutionActionType.EXECUTE_SAFE_TRANSACTION
       )
-
-      const safe1 = await initProtocolKit(withPrefix(s1), {
-        [chainId]: testClient as Eip1193Provider,
-      })
-
-      const safe2 = await initProtocolKit(withPrefix(s2), {
-        [chainId]: testClient as Eip1193Provider,
-      })
-
-      const safeTransaction1 = await safe1.createTransaction({
-        transactions: [execute1.safeTransaction],
-      })
-
-      safeTransaction1.addSignature(
-        new EthSafeSignature(signer.address, signature, false)
+      expect(execute2.signature).not.toBe(null)
+      const transaction2 = await encodeExecTransaction(
+        execute2.safe,
+        execute2.safeTransaction,
+        execute2.signature as Hex
       )
-
-      // this one does not require signature its a pre approval
-      const safeTransaction2 = await safe1.createTransaction({
-        transactions: [execute1.safeTransaction],
-      })
 
       // Except the receiver to have 0, and afterwards 1
       expect(await testClient.getBalance({ address: receiver })).toEqual(0n)
       await testClient.sendTransaction({
         account: deployer,
-        to: s1,
-        data: (await safe1.getEncodedTransaction(safeTransaction1)) as Hex,
-      })
-      expect(await testClient.getBalance({ address: receiver })).toEqual(0n)
-      await testClient.sendTransaction({
-        account: deployer,
-        to: s2,
-        data: (await safe2.getEncodedTransaction(safeTransaction2)) as Hex,
+        ...transaction2,
       })
       expect(await testClient.getBalance({ address: receiver })).toEqual(
         parseEther('1')

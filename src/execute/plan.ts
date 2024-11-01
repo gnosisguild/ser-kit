@@ -1,39 +1,50 @@
 import assert from 'assert'
-import { getAddress, Hash } from 'viem'
-import { generateTypedData as generateTypedDataBase } from '@safe-global/protocol-kit'
-import type {
-  MetaTransactionData,
-  SafeEIP712Args,
+import {
+  Address,
+  encodeFunctionData,
+  getAddress,
+  hashTypedData,
+  zeroAddress,
+} from 'viem'
+import {
+  OperationType,
+  SafeTransactionData,
+  type MetaTransactionData,
 } from '@safe-global/types-kit'
+import { Eip1193Provider } from '@safe-global/protocol-kit'
 
 import { encodeMultiSend } from './multisend'
 import { calculateRouteId, collapseModifiers } from '../query/routes'
 import {
   AccountType,
+  ChainId,
   ConnectionType,
+  StartingPoint,
   type PrefixedAddress,
   type Roles,
   type Route,
   type Waypoint,
 } from '../types'
 
-import { initProtocolKit, type CustomProviders } from './safe'
+import { type CustomProviders } from './safe'
 
-import { encodeApprovedHashSignature } from './signatures'
+import { createPreApprovedSignature } from './signatures'
 import {
-  EIP712TypedData,
+  avatarAbi,
+  encodeApproveHashData,
+  encodeExecTransactionFromModuleData,
+} from './avatar'
+import { encodeExecTransactionWithRoleData } from './roles'
+import { formatPrefixedAddress, parsePrefixedAddress } from '../addresses'
+import { useDefaultRolesForModules } from '../waypoints'
+import { typedDataForSafeTransaction } from '../eip712'
+
+import {
   ExecutionActionType,
   type ExecutionAction,
   type ExecutionPlan,
   type SafeTransactionProperties,
 } from './types'
-import {
-  encodeApproveHashData,
-  encodeExecTransactionFromModuleData,
-} from './avatar'
-import { encodeExecTransactionWithRoleData } from './roles'
-import { parsePrefixedAddress } from '../addresses'
-import { useDefaultRolesForModules } from '../waypoints'
 
 interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
@@ -58,7 +69,7 @@ interface Options {
 export const planExecution = async (
   transactions: readonly MetaTransactionData[],
   route: Route,
-  options?: Options
+  options: Options
 ): Promise<ExecutionPlan> => {
   // encode batch using the appropriate multiSend contract address
   const lastRolesAccount = route.waypoints.findLast(
@@ -69,8 +80,8 @@ export const planExecution = async (
     options?.multiSend ? [options.multiSend] : lastRolesAccount?.multisend
   )
 
-  const [avatarChain] = parsePrefixedAddress(route.avatar)
-  if (!avatarChain) {
+  const [chainId, safe] = parsePrefixedAddress(route.avatar)
+  if (!chainId) {
     throw new Error(
       `Invalid prefixed address for route avatar: ${route.avatar}`
     )
@@ -80,17 +91,20 @@ export const planExecution = async (
   let waypoints = useDefaultRolesForModules(route.waypoints)
   waypoints = collapseModifiers(waypoints)
 
-  const protocolKit = await initProtocolKit(route.avatar, options?.providers)
-
-  const safeTx = await protocolKit.createTransaction({
-    transactions: [transaction],
-    options: options?.safeTransactionProperties?.[route.avatar],
+  const safeTransaction = await populateSafeTransaction({
+    chainId,
+    safe,
+    transaction,
+    options,
   })
+
   let result: ExecutionPlan = [
     {
-      type: ExecutionActionType.EXECUTE_SAFE_TRANSACTION,
+      type: shouldPropose(waypoints[waypoints.length - 1] as Waypoint, options)
+        ? ExecutionActionType.PROPOSE_SAFE_TRANSACTION
+        : ExecutionActionType.EXECUTE_SAFE_TRANSACTION,
       safe: route.avatar,
-      safeTransaction: safeTx.data,
+      safeTransaction,
       signature: null,
       from: route.avatar,
     },
@@ -121,7 +135,6 @@ export const planExecution = async (
             ...(await planAsRoleMember(action, waypoint, options)),
             ...rest,
           ]
-
           continue
         }
 
@@ -141,118 +154,94 @@ const planAsSafeOwner = async (
   request: ExecutionAction,
   waypoints: Route['waypoints'],
   index: number,
-  options?: Options
+  options: Options
 ): Promise<ExecutionPlan> => {
-  const waypoint = waypoints[index]
+  const target = waypoints[index]
   if (
-    waypoint.account.type !== AccountType.SAFE ||
-    !('connection' in waypoint) ||
-    waypoint.connection.type !== ConnectionType.OWNS
+    target.account.type !== AccountType.SAFE ||
+    !('connection' in target) ||
+    target.connection.type !== ConnectionType.OWNS
   ) {
     throw new Error(
       'Expected a Safe account connected through an OWNS connection'
     )
   }
-
-  if (request.type === ExecutionActionType.SIGN_MESSAGE) {
-    // sign a message with a Safe
-    throw new Error('Not implemented')
-  }
-
-  if (request.type === ExecutionActionType.SIGN_TYPED_DATA) {
-    // sign a message with a Safe
-    throw new Error('Not implemented')
-  }
-
-  assert(request.type == ExecutionActionType.EXECUTE_SAFE_TRANSACTION)
-
-  const protocolKit = await initProtocolKit(
-    waypoint.account.prefixedAddress,
-    options?.providers
+  assert(
+    request.type == ExecutionActionType.EXECUTE_SAFE_TRANSACTION ||
+      request.type == ExecutionActionType.PROPOSE_SAFE_TRANSACTION
   )
 
-  const safeTx = request.safeTransaction
+  const [chainId] = parsePrefixedAddress(target.account.prefixedAddress)
+  assert(!!chainId)
 
-  const ownerIsEoa = waypoints[index - 1].account.type == AccountType.EOA
-  const ownerIsSafe = waypoints[index - 1].account.type == AccountType.SAFE
+  const owner = waypoints[index - 1]
+  const ownerIsEoa = owner.account.type == AccountType.EOA
+  const ownerIsSafe = owner.account.type == AccountType.SAFE
+
+  const typedData = typedDataForSafeTransaction({
+    chainId: target.account.chain,
+    safeAddress: target.account.address,
+    safeTransaction: request.safeTransaction,
+  })
 
   if (ownerIsEoa) {
-    const typedData = generateTypedData({
-      safeAddress: getAddress(waypoint.account.address),
-      safeVersion: await protocolKit.getContractVersion(),
-      chainId: BigInt(waypoint.account.chain),
-      data: safeTx,
-    })
+    /*
+     * We will produce an ECDSA signature from owner, authorizing
+     * the transaction that will be executed downstream at safe
+     */
     return [
       {
         type: ExecutionActionType.SIGN_TYPED_DATA,
         data: typedData,
-        from: waypoint.connection.from,
+        from: owner.account.prefixedAddress,
       },
       {
-        type: shouldPropose(waypoint, options)
+        ...request,
+        from: owner.account.prefixedAddress,
+        signature: null, // to be filled
+      },
+    ]
+  } else {
+    assert(ownerIsSafe)
+    /**
+     * When upstream owner is another SAFE:
+     * We could implement complex recursive code for generating fully off-chain
+     * signatures when possible. However, as a first approach for the sake of
+     * stability and simplicity, we will opt to make any intermediate safes to
+     * post onchain approvals, and then utilize use pre-approved hashes downstream.
+     */
+
+    const approvalTransaction = await populateSafeTransaction({
+      chainId,
+      safe: owner.account.address,
+      transaction: {
+        to: target.account.address,
+        value: '0',
+        data: encodeApproveHashData(hashTypedData(typedData)),
+      },
+      options,
+    })
+
+    return [
+      // do the approval from the owner
+      {
+        type: shouldPropose(owner, options)
           ? ExecutionActionType.PROPOSE_SAFE_TRANSACTION
           : ExecutionActionType.EXECUTE_SAFE_TRANSACTION,
-        safe: waypoint.account.prefixedAddress,
-        safeTransaction: safeTx,
-        // the signature produced from the above sign message action will be inserted here during execution of the plan
+        safe: owner.account.prefixedAddress,
+        safeTransaction: approvalTransaction,
+        // to be patched upstream
+        from: `eoa:${zeroAddress}`,
         signature: null,
-        from: waypoint.connection.from,
+      },
+      // patch downstream
+      {
+        ...request,
+        from: owner.account.prefixedAddress,
+        signature: createPreApprovedSignature(owner.account.address),
       },
     ]
   }
-
-  assert(ownerIsSafe)
-  /**
-   * When upstream owner is another SAFE:
-   * We could implement complex recursive code for generating fully off-chain
-   * signatures when possible. However, as a first approach for the sake of
-   * stability and simplicity, we will opt to make any intermediate safes to
-   * post onchain approvals, and then utilize use pre-approved hashes downstream.
-   */
-  const txHash = (await protocolKit.getTransactionHash(
-    await protocolKit.createTransaction({ transactions: [safeTx] })
-  )) as Hash
-
-  const approveTx = await (
-    await protocolKit.connect({
-      safeAddress: waypoints[index - 1].account.address,
-    })
-  ).createTransaction({
-    transactions: [
-      {
-        to: waypoint.account.address,
-        data: encodeApproveHashData(txHash),
-        value: '0',
-      },
-    ],
-  })
-
-  const ownerWaypoint = waypoints[index - 1] as Waypoint
-
-  return [
-    // do the approval from the owner
-    {
-      type: shouldPropose(ownerWaypoint, options)
-        ? ExecutionActionType.PROPOSE_SAFE_TRANSACTION
-        : ExecutionActionType.EXECUTE_SAFE_TRANSACTION,
-      safe: ownerWaypoint.account.prefixedAddress,
-      safeTransaction: approveTx.data,
-      // to be inserted depending on owner
-      signature: null,
-      from: ownerWaypoint.account.prefixedAddress,
-    },
-    // run the actual transaction, using a pre-approved sig
-    {
-      type: shouldPropose(ownerWaypoint, options)
-        ? ExecutionActionType.PROPOSE_SAFE_TRANSACTION
-        : ExecutionActionType.EXECUTE_SAFE_TRANSACTION,
-      safe: waypoint.account.prefixedAddress,
-      safeTransaction: safeTx,
-      signature: encodeApprovedHashSignature(ownerWaypoint.account.address),
-      from: waypoint.connection.from,
-    },
-  ]
 }
 
 const planAsSafeModule = async (
@@ -380,23 +369,7 @@ export const splitExecutableSegments = (route: Route): Route[] => {
   return segments
 }
 
-function generateTypedData(args: SafeEIP712Args): EIP712TypedData {
-  const typedData = generateTypedDataBase(args)
-
-  return {
-    ...typedData,
-    types: typedData.types as any,
-    domain: {
-      ...typedData.domain,
-      chainId: typedData.domain.chainId
-        ? Number(typedData.domain.chainId)
-        : undefined,
-      verifyingContract: typedData.domain.verifyingContract as `0x${string}`,
-    },
-  }
-}
-
-function shouldPropose(waypoint: Waypoint, options?: Options) {
+function shouldPropose(waypoint: Waypoint | StartingPoint, options?: Options) {
   assert(waypoint.account.type == AccountType.SAFE)
   const safeTransactionProperties =
     options?.safeTransactionProperties?.[waypoint.account.prefixedAddress]
@@ -404,4 +377,53 @@ function shouldPropose(waypoint: Waypoint, options?: Options) {
   const proposeOnly = !!safeTransactionProperties?.proposeOnly
   const canExecute = waypoint.account.threshold === 1
   return proposeOnly || !canExecute
+}
+
+async function populateSafeTransaction({
+  chainId,
+  safe,
+  transaction,
+  options,
+}: {
+  chainId: ChainId
+  safe: Address
+  transaction: MetaTransactionData
+  options: Options
+}) {
+  if (!options.providers || !options.providers[chainId]) {
+    throw new Error('Provider is required')
+  }
+
+  const provider = options.providers[chainId] as Eip1193Provider
+  const defaults =
+    options?.safeTransactionProperties?.[formatPrefixedAddress(chainId, safe)]
+
+  const nonce = BigInt(
+    (await provider.request({
+      method: 'eth_call',
+      params: [
+        {
+          to: safe,
+          data: encodeFunctionData({
+            abi: avatarAbi,
+            functionName: 'nonce',
+            args: [],
+          }),
+        },
+      ],
+    })) as string
+  )
+
+  return {
+    to: transaction.to,
+    value: transaction.value,
+    data: transaction.data,
+    operation: transaction.operation ?? OperationType.Call,
+    safeTxGas: Number(defaults?.safeTxGas || 0),
+    baseGas: Number(defaults?.baseGas || 0),
+    gasPrice: Number(defaults?.gasPrice || 0),
+    gasToken: getAddress(defaults?.gasToken || zeroAddress),
+    refundReceiver: getAddress(defaults?.refundReceiver || zeroAddress),
+    nonce: defaults?.nonce || nonce,
+  } as unknown as SafeTransactionData
 }

@@ -33,7 +33,7 @@ export async function deploySafe({
 }: {
   owners: Address[]
   threshold: number
-  creationNonce: number
+  creationNonce: number | bigint
   safeVersion?: SafeVersion
 }): Promise<Address> {
   const address = await calculateAddress({

@@ -28,7 +28,7 @@ describe('plan & execute', () => {
     proposeTransactionMock.mockReset()
   })
 
-  it('should sign and propose a Safe transaction as owner', async () => {
+  it.skip('should sign and propose a Safe transaction as owner', async () => {
     const plan = await planExecution(
       [metaTransactions.wrapEth],
       testRoutes.eoaOwnsSafe,

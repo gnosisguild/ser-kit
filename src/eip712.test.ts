@@ -48,7 +48,7 @@ describe('eip712', () => {
 
     const typedData = typedDataForSafeTransaction({
       chainId: testClient.chain.id,
-      safe,
+      safeAddress: safe,
       safeTransaction,
     })
 

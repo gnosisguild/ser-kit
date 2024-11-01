@@ -2,12 +2,12 @@ import { Address, Hex, zeroAddress } from 'viem'
 import { OperationType } from '@safe-global/types-kit'
 
 export function typedDataForSafeTransaction({
-  safe,
   chainId,
+  safeAddress,
   safeTransaction: { to, value, data, operation, nonce },
 }: {
-  safe: Address
   chainId: number
+  safeAddress: Address
   safeTransaction: {
     to: Address | string
     data: Hex | string
@@ -16,7 +16,7 @@ export function typedDataForSafeTransaction({
     nonce: string | number | bigint
   }
 }) {
-  const domain = { verifyingContract: safe, chainId }
+  const domain = { verifyingContract: safeAddress, chainId }
   const primaryType = 'SafeTx' as const
   const types = {
     SafeTx: [
