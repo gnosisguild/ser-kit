@@ -106,7 +106,6 @@ export const planExecution = async (
       safe: route.avatar,
       safeTransaction,
       signature: null,
-      from: route.avatar,
     },
   ]
 
@@ -197,7 +196,6 @@ const planAsSafeOwner = async (
       },
       {
         ...request,
-        from: owner.account.prefixedAddress,
         signature: null, // to be filled
       },
     ]
@@ -230,14 +228,11 @@ const planAsSafeOwner = async (
           : ExecutionActionType.EXECUTE_SAFE_TRANSACTION,
         safe: owner.account.prefixedAddress,
         safeTransaction: approvalTransaction,
-        // to be patched upstream
-        from: `eoa:${zeroAddress}`,
         signature: null,
       },
       // patch downstream
       {
         ...request,
-        from: owner.account.prefixedAddress,
         signature: createPreApprovedSignature(owner.account.address),
       },
     ]

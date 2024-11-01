@@ -57,7 +57,6 @@ export interface ProposeSafeTransactionAction {
   safeTransaction: SafeTransactionData
   /** If set to null, the previous action's output will be inserted as signature */
   signature: `0x${string}` | null
-  from: PrefixedAddress
 }
 
 export interface ExecuteSafeTransactionAction {
@@ -66,7 +65,6 @@ export interface ExecuteSafeTransactionAction {
   safeTransaction: SafeTransactionData
   /** If set to null, the previous action's output will be inserted as signature */
   signature: `0x${string}` | null
-  from: PrefixedAddress
 }
 
 export type ExecutionAction =

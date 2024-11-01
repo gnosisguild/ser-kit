@@ -1,12 +1,12 @@
 import assert from 'assert'
-import { describe, it, expect } from 'bun:test'
+import { describe, it, expect, test } from 'bun:test'
 import { Address, getAddress, hashMessage, Hex, parseEther, toHex } from 'viem'
 
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 import { OperationType } from '@safe-global/types-kit'
 
 import { planExecution } from './plan'
-import { formatPrefixedAddress } from '../addresses'
+import { formatPrefixedAddress, parsePrefixedAddress } from '../addresses'
 
 import { deployer, testClient } from '../../test/client'
 import { deploySafe } from '../../test/avatar'
@@ -272,7 +272,12 @@ describe('plan', () => {
       ]
 
       expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
-      let signature = await signer.signTypedData(sign.data)
+      expect(parsePrefixedAddress(sign.from)).toEqual([
+        testClient.chain.id,
+        getAddress(signer.address) as any,
+      ])
+
+      const signature = await signer.signTypedData(sign.data)
       expect(execute1.type).toEqual(
         ExecutionActionType.EXECUTE_SAFE_TRANSACTION
       )
@@ -282,23 +287,6 @@ describe('plan', () => {
         execute1.safeTransaction,
         signature
       )
-
-      // console.log(
-      //   await testClient.request({
-      //     method: 'eth_call' as any,
-      //     params: [
-      //       {
-      //         to: s2,
-      //         data: encodeFunctionData({
-      //           abi: avatarAbi,
-      //           functionName: 'approvedHashes',
-      //           args: [s1, hash],
-      //         }),
-      //       },
-      //       'latest',
-      //     ],
-      //   })
-      // )
 
       expect(await testClient.getBalance({ address: receiver })).toEqual(0n)
       await testClient.sendTransaction({
