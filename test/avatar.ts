@@ -24,6 +24,9 @@ import {
   getSafeSingletonDeployment,
 } from '@safe-global/safe-deployments'
 import { deployer, testClient } from './client'
+import { encodeExecTransaction } from '../src/execute/avatar'
+import { formatPrefixedAddress } from '../src'
+import { createPreApprovedSignature } from '../src/execute/signatures'
 
 export async function deploySafe({
   owners,
@@ -53,28 +56,37 @@ export async function deploySafe({
   return address
 }
 
-export function encodeSafeTransaction({
-  transaction: { to, value, data, operation },
-  signatures,
+export async function enableModule({
+  owner,
+  safe,
+  module,
 }: {
-  transaction: MetaTransactionData
-  signatures: Hex
+  owner: any
+  safe: string
+  module: string
 }) {
-  return encodeFunctionData({
-    abi: safeAbi,
-    functionName: 'execTransaction',
-    args: [
-      to as Address,
-      BigInt(value),
-      data as Hex,
-      operation ?? OperationType.Call,
-      0n, // safeTxGas,
-      0n, // baseGas,
-      0n, // gasPrice,
-      zeroAddress, // gasToken,
-      zeroAddress, // refundReceiver,
-      signatures,
-    ],
+  await testClient.sendTransaction({
+    account: owner,
+    ...encodeExecTransaction(
+      formatPrefixedAddress(testClient.chain.id, safe),
+      {
+        to: safe,
+        data: encodeFunctionData({
+          abi: safeAbi,
+          functionName: 'enableModule',
+          args: [module],
+        }),
+        value: '0',
+        safeTxGas: '0',
+        baseGas: '0',
+        gasPrice: '0',
+        refundReceiver: zeroAddress,
+        gasToken: zeroAddress,
+        operation: 0,
+        nonce: 0,
+      },
+      createPreApprovedSignature(owner.address)
+    ),
   })
 }
 

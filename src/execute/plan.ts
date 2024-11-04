@@ -29,17 +29,23 @@ import {
 import { type CustomProviders } from './safe'
 
 import { createPreApprovedSignature } from './signatures'
-import { avatarAbi, encodeApproveHashData } from './avatar'
+import {
+  avatarAbi,
+  encodeApproveHashData,
+  encodeExecTransactionFromModuleData,
+} from './avatar'
 import { formatPrefixedAddress, parsePrefixedAddress } from '../addresses'
 import { typedDataForSafeTransaction } from '../eip712'
 
 import {
+  ExecuteTransactionAction,
   ExecutionActionType,
   type ExecutionAction,
   type ExecutionPlan,
   type SafeTransactionProperties,
 } from './types'
 import { encodeExecTransactionWithRoleData } from './roles'
+import { unwrapExecuteTransaction } from './action'
 
 interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
@@ -98,7 +104,7 @@ export const planExecution = async (
     const [action, ...rest] = result
 
     if (waypoint.account.type == AccountType.EOA) {
-      result = [...(await planAsEOA(action, waypoints, i, options)), ...rest]
+      result = [...(await planAsEOA(action, waypoints, i)), ...rest]
     } else if (waypoint.account.type == AccountType.SAFE) {
       result = [...(await planAsSafe(action, waypoints, i, options)), ...rest]
     } else if (waypoint.account.type == AccountType.ROLES) {
@@ -115,8 +121,7 @@ export const planExecution = async (
 const planAsEOA = async (
   request: ExecutionAction,
   waypoints: Route['waypoints'],
-  index: number,
-  options: Options
+  index: number
 ): Promise<ExecutionAction[]> => {
   const { left, waypoint, right } = pointers(waypoints, index)
   assert(left == null)
@@ -151,47 +156,69 @@ const planAsSafe = async (
   index: number,
   options: Options
 ): Promise<ExecutionAction[]> => {
-  const { waypoint, right } = pointers(waypoints, index)
+  const { waypoint, left, right } = pointers(waypoints, index)
   assert(waypoint.account.type == AccountType.SAFE)
 
-  if (request.type == ExecutionActionType.EXECUTE_TRANSACTION) {
-    const safeTransaction = await populateSafeTransaction({
-      chainId: waypoint.account.chain,
-      safe: waypoint.account.address,
-      transaction: request.transaction,
-      options,
-    })
-    return [
-      {
-        type: shouldPropose(waypoint, options)
-          ? ExecutionActionType.PROPOSE_SAFE_TRANSACTION
-          : ExecutionActionType.RELAY_SAFE_TRANSACTION,
-        safe: waypoint.account.prefixedAddress,
-        safeTransaction,
-        // to be filled upstream
-        signature: null,
-      },
-    ]
-  }
+  assert(
+    'connection' in waypoint &&
+      (waypoint.connection.type == ConnectionType.IS_ENABLED ||
+        waypoint.connection.type == ConnectionType.OWNS)
+  )
 
+  /*
+   * We divide plan as safe in two: IN and OUT
+   *
+   * IN: -----
+   * we determine whether we are generating an approval, or if we
+   * are wrapping execution.
+   *
+   * If generating approval we have to determine downstream's EIP-712
+   * hash, and add an approval action
+   *
+   *
+   * OUT:-----
+   * If upstream there's an owner, we're wrapping current execution into
+   * a relay
+   *
+   * Otherwise, wrap it into an execution
+   */
+
+  // IN
+  let transaction
+  let more
   if (
     request.type == ExecutionActionType.RELAY_SAFE_TRANSACTION ||
     request.type == ExecutionActionType.PROPOSE_SAFE_TRANSACTION
   ) {
-    assert(right?.account.type == AccountType.SAFE)
+    assert(right && right.account.type == AccountType.SAFE)
     const typedData = typedDataForSafeTransaction({
       chainId: right.account.chain,
       safeAddress: right.account.address,
       safeTransaction: request.safeTransaction,
     })
+    transaction = {
+      to: right.account.address,
+      value: '0',
+      data: encodeApproveHashData(hashTypedData(typedData)),
+    }
+    more = [
+      {
+        ...request,
+        signature: createPreApprovedSignature(waypoint.account.address),
+      },
+    ] as ExecutionPlan
+  } else {
+    assert(request.type == ExecutionActionType.EXECUTE_TRANSACTION)
+    transaction = request.transaction
+    more = [] as unknown as ExecutionPlan
+  }
+
+  // OUT
+  if (waypoint.connection.type == ConnectionType.OWNS) {
     const approvalTransaction = await populateSafeTransaction({
       chainId: waypoint.account.chain,
       safe: waypoint.account.address,
-      transaction: {
-        to: right.account.address,
-        value: '0',
-        data: encodeApproveHashData(hashTypedData(typedData)),
-      },
+      transaction,
       options,
     })
 
@@ -204,14 +231,24 @@ const planAsSafe = async (
         safeTransaction: approvalTransaction,
         signature: null, // to be filled upstream
       },
+      ...more,
+    ]
+  } else {
+    assert(waypoint.connection.type == ConnectionType.IS_ENABLED)
+    return [
       {
-        ...request,
-        signature: createPreApprovedSignature(waypoint.account.address),
+        type: ExecutionActionType.EXECUTE_TRANSACTION,
+        transaction: {
+          to: waypoint.account.address,
+          data: encodeExecTransactionFromModuleData(transaction),
+          value: '0',
+        },
+        from: left!.account.prefixedAddress,
+        chain: waypoint.account.chain,
       },
+      ...more,
     ]
   }
-
-  throw new Error(`Unsupported/Unexpected (TODO better message)`)
 }
 
 const planAsRoles = async (
@@ -221,7 +258,7 @@ const planAsRoles = async (
   options: Options
 ): Promise<ExecutionAction[]> => {
   /*
-   * In the future we'll implement relays for Modules
+   * coming soon: relays for Modules
    */
 
   const { waypoint, left, right } = pointers(waypoints, index)
@@ -243,13 +280,6 @@ const planAsRoles = async (
   if (!validDownstream) {
     throw new Error(`Invalid Roles downstream relationship`)
   }
-  assert(
-    [
-      ExecutionActionType.EXECUTE_TRANSACTION,
-      ExecutionActionType.RELAY_SAFE_TRANSACTION,
-      ExecutionActionType.PROPOSE_SAFE_TRANSACTION,
-    ].includes(request.type)
-  )
 
   const version = waypoint.account.version
   const role =
@@ -257,8 +287,9 @@ const planAsRoles = async (
     waypoint.connection.defaultRole ||
     waypoint.connection.roles[0]
 
-  const transaction: MetaTransactionData =
-    (request as any).transaction || (request as any).safeTransaction
+  const transaction = unwrapExecuteTransaction(
+    request as ExecuteTransactionAction
+  )
 
   return [
     {

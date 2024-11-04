@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'bun:test'
-import { Address, getAddress, Hash, Hex, parseEther, toHex } from 'viem'
+import {
+  Address,
+  getAddress,
+  Hash,
+  hashMessage,
+  Hex,
+  parseEther,
+  toHex,
+  zeroAddress,
+} from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
 import { Eip1193Provider } from '@safe-global/protocol-kit'
@@ -9,7 +18,7 @@ import { planExecution } from './plan'
 import { formatPrefixedAddress, parsePrefixedAddress } from '../addresses'
 
 import { deployer, randomHash, testClient } from '../../test/client'
-import { deploySafe } from '../../test/avatar'
+import { deploySafe, enableModule } from '../../test/avatar'
 import { AccountType, ConnectionType, Route } from '../types'
 import {
   ExecuteSafeTransactionAction,
@@ -20,6 +29,7 @@ import {
 
 import { encodeExecTransaction } from './avatar'
 import { setupRolesMod } from '../../test/roles'
+import { createPreApprovedSignature } from './signatures'
 
 const makeAddress = (number: number): Address =>
   getAddress(toHex(number, { size: 20 }))
@@ -314,7 +324,7 @@ describe('plan', () => {
 
       expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
       expect(parsePrefixedAddress(sign.from)).toEqual([
-        testClient.chain.id,
+        undefined,
         getAddress(eoa.address) as any,
       ])
 
@@ -351,6 +361,104 @@ describe('plan', () => {
       expect(await testClient.getBalance({ address: receiver })).toEqual(
         parseEther('1')
       )
+    })
+  })
+
+  describe('EOA --owns--> SAFE1/1 --enabled--> SAFE1/1', () => {
+    it('plans execution', async () => {
+      const eoa = privateKeyToAccount(hashMessage('eoa'))
+      const someoneelse = privateKeyToAccount(hashMessage('someoneelse'))
+      const receiver = privateKeyToAccount(hashMessage('receiver'))
+
+      const safe1 = await deploySafe({
+        owners: [eoa.address],
+        threshold: 1,
+        creationNonce: BigInt(hashMessage('safe1')),
+      })
+
+      const safe2 = await deploySafe({
+        owners: [someoneelse.address],
+        threshold: 1,
+        creationNonce: BigInt(hashMessage('safe2')),
+      })
+
+      await testClient.sendTransaction({
+        account: deployer,
+        to: someoneelse.address,
+        value: parseEther('1'),
+      })
+
+      await testClient.sendTransaction({
+        account: deployer,
+        to: safe2,
+        value: parseEther('2'),
+      })
+
+      // enable safe1 on safe2
+      await enableModule({ owner: someoneelse, safe: safe2, module: safe1 })
+
+      const route = createRouteEoaOwnsSafeMemberOfSafe({
+        eoa: eoa.address,
+        s1: safe1,
+        s2: safe2,
+      })
+
+      // fund the safe with 2 eth
+      await testClient.sendTransaction({
+        account: deployer,
+        to: safe2,
+        value: parseEther('2'),
+      })
+
+      const chainId = testClient.chain.id
+
+      // plan a transfer of 1 eth into receiver
+      const plan = await planExecution(
+        [
+          {
+            data: '0x',
+            to: receiver.address,
+            value: String(parseEther('1')),
+          },
+        ],
+        route,
+        {
+          providers: { [chainId]: testClient as Eip1193Provider },
+        }
+      )
+
+      expect(plan).toHaveLength(2)
+
+      const [sign, execute] = plan as [
+        SignTypedDataAction,
+        ExecuteSafeTransactionAction,
+      ]
+
+      expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
+      expect(parsePrefixedAddress(sign.from)).toEqual([
+        undefined,
+        getAddress(eoa.address) as any,
+      ])
+
+      const signature = await eoa.signTypedData(sign.data)
+      expect(execute.type).toEqual(ExecutionActionType.RELAY_SAFE_TRANSACTION)
+      expect(execute.signature).toBe(null)
+      const transaction = await encodeExecTransaction(
+        execute.safe,
+        execute.safeTransaction,
+        signature
+      )
+
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(0n)
+      await testClient.sendTransaction({
+        account: deployer,
+        ...transaction,
+      })
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(parseEther('1'))
     })
   })
 
@@ -399,7 +507,7 @@ describe('plan', () => {
       })
 
       const route = createRouteEoaRolesSafe({
-        eoa: member.address,
+        eoa: member.address as any,
         roles,
         roleId,
         safe,
@@ -468,7 +576,7 @@ function createRouteEoaOwnsSafe({
       {
         account: {
           type: AccountType.EOA,
-          prefixedAddress: withPrefix(eoa),
+          prefixedAddress: `eoa:${eoa}`,
           address: eoa,
         },
       },
@@ -482,12 +590,12 @@ function createRouteEoaOwnsSafe({
         },
         connection: {
           type: ConnectionType.OWNS,
-          from: withPrefix(eoa),
+          from: `eoa:${eoa}`,
         },
       },
     ],
     id: 'test',
-    initiator: withPrefix(eoa),
+    initiator: `eoa:${eoa}`,
     avatar: withPrefix(safe),
   } as Route
 
@@ -512,7 +620,7 @@ function createRouteEoaOwnsSafeOwnsSafe({
       {
         account: {
           type: AccountType.EOA,
-          prefixedAddress: withPrefix(eoa),
+          prefixedAddress: `eoa:${eoa}`,
           address: eoa,
         },
       },
@@ -526,7 +634,7 @@ function createRouteEoaOwnsSafeOwnsSafe({
         },
         connection: {
           type: ConnectionType.OWNS,
-          from: withPrefix(eoa),
+          from: `eoa:${eoa}`,
         },
       },
       {
@@ -544,7 +652,64 @@ function createRouteEoaOwnsSafeOwnsSafe({
       },
     ],
     id: 'test',
-    initiator: withPrefix(eoa),
+    initiator: `eoa:${eoa}`,
+    avatar: withPrefix(s2),
+  } as Route
+
+  return route
+}
+
+function createRouteEoaOwnsSafeMemberOfSafe({
+  eoa,
+  s1,
+  s1Threshold = 1,
+  s2,
+  s2Threshold = 1,
+}: {
+  eoa: Address
+  s1: Address
+  s1Threshold?: number
+  s2: Address
+  s2Threshold?: number
+}): Route {
+  const route = {
+    waypoints: [
+      {
+        account: {
+          type: AccountType.EOA,
+          prefixedAddress: `eoa:${eoa}`,
+          address: eoa,
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          prefixedAddress: withPrefix(s1),
+          address: s1,
+          chain: testClient.chain.id,
+          threshold: s1Threshold,
+        },
+        connection: {
+          type: ConnectionType.OWNS,
+          from: `eoa:${eoa}`,
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          prefixedAddress: withPrefix(s2),
+          address: s2,
+          chain: testClient.chain.id,
+          threshold: s2Threshold,
+        },
+        connection: {
+          type: ConnectionType.IS_ENABLED,
+          from: withPrefix(s1),
+        },
+      },
+    ],
+    id: 'test',
+    initiator: `eoa:${eoa}`,
     avatar: withPrefix(s2),
   } as Route
 
@@ -557,7 +722,7 @@ function createRouteEoaRolesSafe({
   roleId,
   safe,
 }: {
-  eoa: Address
+  eoa: `0x${string}`
   roles: Address
   roleId: Hash
   safe: Address
@@ -567,7 +732,7 @@ function createRouteEoaRolesSafe({
       {
         account: {
           type: AccountType.EOA,
-          prefixedAddress: withPrefix(eoa),
+          prefixedAddress: `eoa:${eoa}`,
           address: eoa as `0x${string}`,
         },
       },
@@ -583,7 +748,7 @@ function createRouteEoaRolesSafe({
         connection: {
           type: ConnectionType.IS_MEMBER,
           roles: [roleId],
-          from: withPrefix(eoa),
+          from: `eoa:${eoa}`,
         },
       },
       {
@@ -602,7 +767,7 @@ function createRouteEoaRolesSafe({
       },
     ],
     id: 'test',
-    initiator: withPrefix(eoa),
+    initiator: `eoa:${eoa}`,
     avatar: withPrefix(safe),
   }
 }

@@ -1,11 +1,19 @@
-import { encodeFunctionData, Hash, Hex, parseAbi } from 'viem'
 import {
+  decodeFunctionData,
+  encodeFunctionData,
+  Hash,
+  Hex,
+  parseAbi,
+} from 'viem'
+import {
+  OperationType,
   SafeTransactionData,
   type MetaTransactionData,
 } from '@safe-global/types-kit'
 
 import { parsePrefixedAddress } from '../addresses'
 import { PrefixedAddress } from '../types'
+import { ExecuteSafeTransactionAction } from './types'
 
 export const avatarAbi = parseAbi([
   'function approveHash(bytes32 hashToApprove)',
@@ -58,7 +66,7 @@ export const encodeExecTransactionFromModuleData = (
       transaction.to,
       BigInt(transaction.value),
       transaction.data as Hex,
-      transaction.operation!,
+      transaction.operation || OperationType.Call,
     ],
   })
 }
