@@ -28,11 +28,7 @@ import {
 import { type CustomProviders } from './safe'
 
 import { createPreApprovedSignature } from './signatures'
-import {
-  avatarAbi,
-  encodeApproveHashData,
-  encodeExecTransactionFromModuleData,
-} from './avatar'
+import { avatarAbi, encodeApproveHashData } from './avatar'
 import { formatPrefixedAddress, parsePrefixedAddress } from '../addresses'
 import { typedDataForSafeTransaction } from '../eip712'
 

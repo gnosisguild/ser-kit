@@ -1,13 +1,6 @@
 import { describe, it, expect } from 'bun:test'
-import {
-  Address,
-  getAddress,
-  Hash,
-  hashMessage,
-  Hex,
-  parseEther,
-  toHex,
-} from 'viem'
+import { Address, getAddress, Hash, Hex, parseEther, toHex } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
 
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 import { OperationType } from '@safe-global/types-kit'
@@ -24,7 +17,7 @@ import {
   ExecutionActionType,
   SignTypedDataAction,
 } from './types'
-import { privateKeyToAccount } from 'viem/accounts'
+
 import { encodeExecTransaction } from './avatar'
 import { setupRolesMod } from '../../test/roles'
 
@@ -33,9 +26,6 @@ const makeAddress = (number: number): Address =>
 
 const withPrefix = (address: Address) =>
   formatPrefixedAddress(testClient.chain.id, address)
-
-let safeCounter = 0
-let signerCounter = 0
 
 describe('plan', () => {
   it.skip('should correctly plan execution through a role', async () => {
@@ -118,16 +108,18 @@ describe('plan', () => {
 
   describe('EOA --owns--> SAFE-1/1', () => {
     it('plans execution', async () => {
-      const signer = privateKeyToAccount(
-        hashMessage(`unique-signer ${++signerCounter}`)
-      )
-      const receiver = privateKeyToAccount(
-        hashMessage(`unique-signer ${++signerCounter}`)
-      ).address
+      const signer = privateKeyToAccount(randomHash())
+      const receiver = privateKeyToAccount(randomHash())
 
-      const { safe, route } = await setupEOAOwnerOfSafe({
+      const safe = await deploySafe({
+        owners: [signer.address],
+        creationNonce: BigInt(randomHash()),
+        threshold: 1,
+      })
+
+      const route = createRouteEoaOwnsSafe({
         eoa: signer.address,
-        creationNonce: safeCounter++,
+        safe,
         threshold: 1,
       })
 
@@ -144,7 +136,7 @@ describe('plan', () => {
         [
           {
             data: '0x',
-            to: receiver,
+            to: receiver.address,
             value: String(parseEther('1')),
             operation: OperationType.Call,
           },
@@ -178,28 +170,43 @@ describe('plan', () => {
         signature
       )
 
-      expect(await testClient.getBalance({ address: receiver })).toEqual(0n)
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(0n)
       await testClient.sendTransaction({
         account: deployer,
         ...transaction,
       })
 
-      expect(await testClient.getBalance({ address: receiver })).toEqual(
-        parseEther('1')
-      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(parseEther('1'))
     })
 
     it('plans proposal with signature, when proposeOnly', async () => {
-      const {
-        safe,
-        route,
-        defaultSafeTx: safeTx,
-      } = await setupEOAOwnerOfSafe({
-        creationNonce: safeCounter++,
+      const signer = privateKeyToAccount(randomHash())
+      const receiver = privateKeyToAccount(randomHash())
+
+      const safe = await deploySafe({
+        owners: [signer.address],
+        creationNonce: BigInt(randomHash()),
         threshold: 1,
       })
 
-      const plan = await planExecution([safeTx], route, {
+      const route = createRouteEoaOwnsSafe({
+        eoa: signer.address,
+        safe,
+        threshold: 1,
+      })
+
+      const transaction = {
+        data: '0x',
+        to: receiver.address,
+        value: String(parseEther('1')),
+        operation: OperationType.Call,
+      }
+
+      const plan = await planExecution([transaction], route, {
         providers: { [testClient.chain.id]: testClient as Eip1193Provider },
         safeTransactionProperties: {
           [withPrefix(safe)]: { proposeOnly: true },
@@ -215,14 +222,31 @@ describe('plan', () => {
 
   describe('EOA --owns--> SAFE-2/2', () => {
     it('plans proposal with signature, since direct execution is not possible', async () => {
-      const { route, defaultSafeTx: safeTx } = await setupEOAOwnerOfSafe({
-        creationNonce: safeCounter++,
+      const signer1 = privateKeyToAccount(randomHash())
+      const signer2 = privateKeyToAccount(randomHash())
+      const receiver = privateKeyToAccount(randomHash())
+
+      const safe = await deploySafe({
+        owners: [signer1.address, signer2.address],
+        creationNonce: BigInt(randomHash()),
         threshold: 2,
       })
 
-      const chainId = testClient.chain.id
+      const route = createRouteEoaOwnsSafe({
+        eoa: signer1.address,
+        safe,
+        threshold: 2,
+      })
 
-      const plan = await planExecution([safeTx], route, {
+      const transaction = {
+        data: '0x',
+        to: receiver.address,
+        value: '0',
+        operation: 1,
+      }
+
+      const chainId = testClient.chain.id
+      const plan = await planExecution([transaction], route, {
         providers: { [chainId]: testClient as Eip1193Provider },
       })
 
@@ -235,23 +259,31 @@ describe('plan', () => {
 
   describe('EOA --owns--> SAFE1/1 --owns--> SAFE1/1', () => {
     it('plans execution', async () => {
-      const signer = privateKeyToAccount(
-        hashMessage(`signer ${++signerCounter}`)
-      )
-      const receiver = privateKeyToAccount(
-        hashMessage(`signer ${++signerCounter}`)
-      ).address
+      const eoa = privateKeyToAccount(randomHash())
+      const receiver = privateKeyToAccount(randomHash()).address
 
-      const { route, s1, s2 } = await setupEoaSafeSafe({
-        eoa: signer.address,
-        creationNonce: safeCounter++,
+      const safe1 = await deploySafe({
+        owners: [eoa.address],
         threshold: 1,
+        creationNonce: BigInt(randomHash()),
+      })
+
+      const safe2 = await deploySafe({
+        owners: [safe1],
+        threshold: 1,
+        creationNonce: BigInt(randomHash()),
+      })
+
+      const route = createRouteEoaOwnsSafeOwnsSafe({
+        eoa: eoa.address,
+        s1: safe1,
+        s2: safe2,
       })
 
       // fund the safe with 2 eth
       await testClient.sendTransaction({
         account: deployer,
-        to: s2,
+        to: safe2,
         value: parseEther('2'),
       })
 
@@ -283,10 +315,10 @@ describe('plan', () => {
       expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
       expect(parsePrefixedAddress(sign.from)).toEqual([
         testClient.chain.id,
-        getAddress(signer.address) as any,
+        getAddress(eoa.address) as any,
       ])
 
-      const signature = await signer.signTypedData(sign.data)
+      const signature = await eoa.signTypedData(sign.data)
       expect(execute1.type).toEqual(ExecutionActionType.RELAY_SAFE_TRANSACTION)
       expect(execute1.signature).toBe(null)
       const transaction1 = await encodeExecTransaction(
@@ -422,29 +454,21 @@ describe('plan', () => {
   })
 })
 
-async function setupEOAOwnerOfSafe({
+function createRouteEoaOwnsSafe({
   eoa,
-  threshold,
-  creationNonce,
+  safe,
+  threshold = 1,
 }: {
-  eoa?: Address
-  threshold: number
-  creationNonce: number
+  eoa: Address
+  safe: Address
+  threshold?: number
 }) {
-  const _eoa = eoa || makeAddress(3)
-
-  const safe = await deploySafe({
-    owners: [_eoa, makeAddress(999)],
-    threshold,
-    creationNonce,
-  })
-
   const route = {
     waypoints: [
       {
         account: {
           type: AccountType.EOA,
-          prefixedAddress: withPrefix(_eoa),
+          prefixedAddress: withPrefix(eoa),
           address: eoa,
         },
       },
@@ -458,47 +482,31 @@ async function setupEOAOwnerOfSafe({
         },
         connection: {
           type: ConnectionType.OWNS,
-          from: withPrefix(_eoa),
+          from: withPrefix(eoa),
         },
       },
     ],
     id: 'test',
-    initiator: withPrefix(_eoa),
+    initiator: withPrefix(eoa),
     avatar: withPrefix(safe),
   } as Route
 
-  // a default tx
-  const defaultSafeTx = {
-    data: '0xaabbccdd',
-    operation: OperationType.Call,
-    to: makeAddress(123456789),
-    value: '0',
-  }
-
-  return { route, eoa: _eoa, safe, defaultSafeTx }
+  return route
 }
 
-async function setupEoaSafeSafe({
+function createRouteEoaOwnsSafeOwnsSafe({
   eoa,
-  threshold,
-  creationNonce,
+  s1,
+  s1Threshold = 1,
+  s2,
+  s2Threshold = 1,
 }: {
   eoa: Address
-  threshold: number
-  creationNonce: number
-}) {
-  const s1 = await deploySafe({
-    owners: [eoa],
-    threshold,
-    creationNonce,
-  })
-
-  const s2 = await deploySafe({
-    owners: [s1],
-    threshold,
-    creationNonce,
-  })
-
+  s1: Address
+  s1Threshold?: number
+  s2: Address
+  s2Threshold?: number
+}): Route {
   const route = {
     waypoints: [
       {
@@ -514,7 +522,7 @@ async function setupEoaSafeSafe({
           prefixedAddress: withPrefix(s1),
           address: s1,
           chain: testClient.chain.id,
-          threshold,
+          threshold: s1Threshold,
         },
         connection: {
           type: ConnectionType.OWNS,
@@ -527,7 +535,7 @@ async function setupEoaSafeSafe({
           prefixedAddress: withPrefix(s2),
           address: s2,
           chain: testClient.chain.id,
-          threshold,
+          threshold: s2Threshold,
         },
         connection: {
           type: ConnectionType.OWNS,
@@ -540,7 +548,7 @@ async function setupEoaSafeSafe({
     avatar: withPrefix(s2),
   } as Route
 
-  return { route, eoa, s1, s2 }
+  return route
 }
 
 function createRouteEoaRolesSafe({
