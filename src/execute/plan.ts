@@ -17,6 +17,7 @@ import { encodeMultiSend } from './multisend'
 import {
   AccountType,
   ChainId,
+  Connection,
   ConnectionType,
   StartingPoint,
   type PrefixedAddress,
@@ -117,25 +118,25 @@ const planAsEOA = async (
   index: number,
   options: Options
 ): Promise<ExecutionAction[]> => {
-  const { prev, curr, next, chainId } = unfold(waypoints, index)
-  assert(prev == null)
-  assert(curr.account.type == AccountType.EOA)
-  assert(next && 'connection' in next)
+  const { left, waypoint, right } = pointers(waypoints, index)
+  assert(left == null)
+  assert(waypoint.account.type == AccountType.EOA)
+  assert(right && 'connection' in right)
 
   if (
     request.type === ExecutionActionType.RELAY_SAFE_TRANSACTION ||
     request.type === ExecutionActionType.PROPOSE_SAFE_TRANSACTION
   ) {
     const typedData = typedDataForSafeTransaction({
-      chainId: next.account.chain,
-      safeAddress: next.account.address,
+      chainId: right.account.chain,
+      safeAddress: right.account.address,
       safeTransaction: request.safeTransaction,
     })
     return [
       {
         type: ExecutionActionType.SIGN_TYPED_DATA,
         data: typedData,
-        from: curr.account.prefixedAddress,
+        from: waypoint.account.prefixedAddress,
       },
       request,
     ]
@@ -150,34 +151,25 @@ const planAsSafe = async (
   index: number,
   options: Options
 ): Promise<ExecutionAction[]> => {
-  const curr = waypoints[index]
-  assert(curr.account.type == AccountType.SAFE)
-
-  if (!('connection' in curr)) {
-    throw new Error('Expected a Safe connected to')
-  }
-  const [chainId] = parsePrefixedAddress(curr.account.prefixedAddress)
-  assert(!!chainId)
-
-  const prev = index > 0 ? waypoints[index - 1] : null
-  const next = index < waypoints.length + 1 ? waypoints[index + 1] : null
-  assert(curr.connection.from == prev?.account.prefixedAddress)
+  const { waypoint, right } = pointers(waypoints, index)
+  assert(waypoint.account.type == AccountType.SAFE)
 
   if (request.type == ExecutionActionType.EXECUTE_TRANSACTION) {
     const safeTransaction = await populateSafeTransaction({
-      chainId,
-      safe: curr.account.address,
+      chainId: waypoint.account.chain,
+      safe: waypoint.account.address,
       transaction: request.transaction,
       options,
     })
     return [
       {
-        type: shouldPropose(curr, options)
+        type: shouldPropose(waypoint, options)
           ? ExecutionActionType.PROPOSE_SAFE_TRANSACTION
           : ExecutionActionType.RELAY_SAFE_TRANSACTION,
-        safe: curr.account.prefixedAddress,
+        safe: waypoint.account.prefixedAddress,
         safeTransaction,
-        signature: null, // to be filled
+        // to be filled upstream
+        signature: null,
       },
     ]
   }
@@ -186,17 +178,17 @@ const planAsSafe = async (
     request.type == ExecutionActionType.RELAY_SAFE_TRANSACTION ||
     request.type == ExecutionActionType.PROPOSE_SAFE_TRANSACTION
   ) {
-    assert(next?.account.type == AccountType.SAFE)
+    assert(right?.account.type == AccountType.SAFE)
     const typedData = typedDataForSafeTransaction({
-      chainId: next.account.chain,
-      safeAddress: next.account.address,
+      chainId: right.account.chain,
+      safeAddress: right.account.address,
       safeTransaction: request.safeTransaction,
     })
     const approvalTransaction = await populateSafeTransaction({
-      chainId,
-      safe: curr.account.address,
+      chainId: waypoint.account.chain,
+      safe: waypoint.account.address,
       transaction: {
-        to: next.account.address,
+        to: right.account.address,
         value: '0',
         data: encodeApproveHashData(hashTypedData(typedData)),
       },
@@ -205,16 +197,16 @@ const planAsSafe = async (
 
     return [
       {
-        type: shouldPropose(curr, options)
+        type: shouldPropose(waypoint, options)
           ? ExecutionActionType.PROPOSE_SAFE_TRANSACTION
           : ExecutionActionType.RELAY_SAFE_TRANSACTION,
-        safe: curr.account.prefixedAddress,
+        safe: waypoint.account.prefixedAddress,
         safeTransaction: approvalTransaction,
         signature: null, // to be filled upstream
       },
       {
         ...request,
-        signature: createPreApprovedSignature(curr.account.address),
+        signature: createPreApprovedSignature(waypoint.account.address),
       },
     ]
   }
@@ -229,28 +221,25 @@ const planAsRoles = async (
   options: Options
 ): Promise<ExecutionAction[]> => {
   /*
-   * Once we add backend support, we will be able
-   * to detect relay friendliness on roles mods
-   * and an option to relay will be intruced here as
-   * well
+   * In the future we'll implement relays for Modules
    */
 
-  const { prev, curr, next, chainId } = unfold(waypoints, index)
-  assert(curr.account.type == AccountType.ROLES)
+  const { waypoint, left, right } = pointers(waypoints, index)
+  assert(waypoint.account.type == AccountType.ROLES)
 
   const validUpstream =
-    prev != null &&
-    'connection' in curr &&
-    curr.connection.type == ConnectionType.IS_MEMBER
+    left != null &&
+    'connection' in waypoint &&
+    waypoint.connection.type == ConnectionType.IS_MEMBER
   if (!validUpstream) {
     throw new Error(`Invalid Roles upstream relationship`)
   }
-  assert(curr.connection.type == ConnectionType.IS_MEMBER)
+  assert(waypoint.connection.type == ConnectionType.IS_MEMBER)
 
   const validDownstream =
-    next?.connection.type == ConnectionType.IS_ENABLED &&
-    (next?.account.type == AccountType.SAFE ||
-      next?.account.type == AccountType.DELAY)
+    right?.connection.type == ConnectionType.IS_ENABLED &&
+    (right?.account.type == AccountType.SAFE ||
+      right?.account.type == AccountType.DELAY)
   if (!validDownstream) {
     throw new Error(`Invalid Roles downstream relationship`)
   }
@@ -262,11 +251,11 @@ const planAsRoles = async (
     ].includes(request.type)
   )
 
-  const version = curr.account.version
+  const version = waypoint.account.version
   const role =
-    options?.roles?.[curr.connection.from] ||
-    curr.connection.defaultRole ||
-    curr.connection.roles[0]
+    options?.roles?.[waypoint.connection.from] ||
+    waypoint.connection.defaultRole ||
+    waypoint.connection.roles[0]
 
   const transaction: MetaTransactionData =
     (request as any).transaction || (request as any).safeTransaction
@@ -274,13 +263,13 @@ const planAsRoles = async (
   return [
     {
       type: ExecutionActionType.EXECUTE_TRANSACTION,
+      chain: waypoint.account.chain,
       transaction: {
-        to: curr.account.address,
+        to: waypoint.account.address,
         data: encodeExecTransactionWithRoleData(transaction, role, version),
         value: '0',
       },
-      from: prev.account.prefixedAddress,
-      chain: chainId,
+      from: left.account.prefixedAddress,
     },
   ]
 }
@@ -344,28 +333,33 @@ async function populateSafeTransaction({
   } as unknown as SafeTransactionData
 }
 
-function unfold(waypoints: Route['waypoints'], index: number) {
-  const curr = waypoints[index]
-  const prev = index > 0 ? waypoints[index - 1] : null
-  const next = index < waypoints.length + 1 ? waypoints[index + 1] : null
-  if ('connection' in curr) {
-    assert(curr.connection.from == prev?.account.prefixedAddress)
+function pointers(waypoints: Route['waypoints'], index: number) {
+  const waypoint = waypoints[index]
+
+  const left = index > 0 ? waypoints[index - 1] : null
+  if (left) {
+    assert(
+      'connection' in waypoint &&
+        waypoint.connection.from == left?.account.prefixedAddress
+    )
   }
 
-  const [chainId] = parsePrefixedAddress(
-    waypoints[index].account.prefixedAddress
-  )
-  assert(!!chainId)
+  const right = index < waypoints.length + 1 ? waypoints[index + 1] : null
+  if (right) {
+    assert(
+      'connection' in right &&
+        (right.connection as Connection).from ==
+          waypoint.account.prefixedAddress
+    )
+  }
 
   return {
-    prev,
-    curr,
-    next,
-    chainId,
+    waypoint,
+    left,
+    right,
   } as {
-    prev: StartingPoint | Waypoint | null
-    curr: StartingPoint | Waypoint
-    next: Waypoint | null
-    chainId: ChainId
+    waypoint: StartingPoint | Waypoint
+    left: StartingPoint | Waypoint | null
+    right: Waypoint | null
   }
 }
