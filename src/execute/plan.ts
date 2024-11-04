@@ -123,10 +123,9 @@ const planAsEOA = async (
   waypoints: Route['waypoints'],
   index: number
 ): Promise<ExecutionAction[]> => {
-  const { left, waypoint, right } = pointers(waypoints, index)
-  assert(left == null)
+  const { waypoint, right } = pointers(waypoints, index)
   assert(waypoint.account.type == AccountType.EOA)
-  assert(right && 'connection' in right)
+  assert(right != null)
 
   if (
     request.type === ExecutionActionType.SAFE_TRANSACTION ||
@@ -135,7 +134,7 @@ const planAsEOA = async (
     const typedData = typedDataForSafeTransaction({
       chainId: right.account.chain,
       safeAddress: right.account.address,
-      safeTransaction: request.transaction,
+      safeTransaction: request.safeTransaction,
     })
     return [
       {
@@ -175,39 +174,38 @@ const planAsSafe = async (
    * We divide plan as safe in two: IN and OUT
    *
    * IN: -----
-   * we determine whether we are generating an approval, or if we
-   * are wrapping execution.
-   *
-   * If generating approval we have to determine downstream's EIP-712
-   * hash, and add an approval action
+   * we determine whether we are generating an approval, for a downstream
+   * transaction in a safe where we are currently owners. If so, we generate
+   * an extra approval transaction. This requires that we determine downstream's EIP-712
+   * hash, call approveHash with it
    *
    *
    * OUT:-----
-   * If upstream there's an owner, we're wrapping current execution into
-   * a relay
+   * On out we do wrapping. If upstream there's an owner, we're wrapping current execution
+   * into a relay.
    *
    * Otherwise, wrap it into an execution
    */
 
   // IN
-  let transaction = request.transaction
-  let more = [] as unknown as ExecutionPlan
-  if (
-    request.type == ExecutionActionType.SAFE_TRANSACTION ||
-    request.type == ExecutionActionType.PROPOSE_TRANSACTION
-  ) {
+  let transaction, result
+  if (request.type == ExecutionActionType.EXECUTE_TRANSACTION) {
+    transaction = request.transaction
+    result = [] as ExecutionAction[]
+  } else {
+    // create the extra approval action and insert pre approved sig
     assert(right && right.account.type == AccountType.SAFE)
     const typedData = typedDataForSafeTransaction({
       chainId: right.account.chain,
       safeAddress: right.account.address,
-      safeTransaction: request.transaction,
+      safeTransaction: request.safeTransaction,
     })
     transaction = {
       to: right.account.address,
       value: '0',
       data: encodeApproveHashData(hashTypedData(typedData)),
     }
-    more = [
+    result = [
       {
         ...request,
         signature: createPreApprovedSignature(waypoint.account.address),
@@ -217,23 +215,21 @@ const planAsSafe = async (
 
   // OUT
   if (waypoint.connection.type == ConnectionType.OWNS) {
-    const approvalTransaction = await populateSafeTransaction({
-      chainId: waypoint.account.chain,
-      safe: waypoint.account.address,
-      transaction,
-      options,
-    })
-
     return [
       {
         type: shouldPropose(waypoint, options)
           ? ExecutionActionType.PROPOSE_TRANSACTION
           : ExecutionActionType.SAFE_TRANSACTION,
         safe: waypoint.account.prefixedAddress,
-        transaction: approvalTransaction,
+        safeTransaction: await populateSafeTransaction({
+          chainId: waypoint.account.chain,
+          safe: waypoint.account.address,
+          transaction,
+          options,
+        }),
         signature: null, // to be filled upstream
       },
-      ...more,
+      ...result,
     ]
   } else {
     assert(waypoint.connection.type == ConnectionType.IS_ENABLED)
@@ -248,7 +244,7 @@ const planAsSafe = async (
         from: left!.account.prefixedAddress,
         chain: waypoint.account.chain,
       },
-      ...more,
+      ...result,
     ]
   }
 }
@@ -262,7 +258,6 @@ const planAsRoles = async (
   /*
    * coming soon: relays for Modules
    */
-
   const { waypoint, left, right } = pointers(waypoints, index)
   assert(waypoint.account.type == AccountType.ROLES)
 

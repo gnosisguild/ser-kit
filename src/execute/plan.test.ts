@@ -173,7 +173,7 @@ describe('plan', () => {
 
       const transaction = await encodeExecTransaction(
         execute.safe,
-        execute.transaction,
+        execute.safeTransaction,
         signature
       )
 
@@ -330,7 +330,7 @@ describe('plan', () => {
       expect(execute1.signature).toBe(null)
       const transaction1 = await encodeExecTransaction(
         execute1.safe,
-        execute1.transaction,
+        execute1.safeTransaction,
         signature
       )
 
@@ -345,7 +345,7 @@ describe('plan', () => {
       expect(execute2.signature).not.toBe(null)
       const transaction2 = await encodeExecTransaction(
         execute2.safe,
-        execute2.transaction,
+        execute2.safeTransaction,
         execute2.signature as Hex
       )
 
@@ -442,7 +442,7 @@ describe('plan', () => {
       expect(execute.signature).toBe(null)
       const transaction = await encodeExecTransaction(
         execute.safe,
-        execute.transaction,
+        execute.safeTransaction,
         signature
       )
 
