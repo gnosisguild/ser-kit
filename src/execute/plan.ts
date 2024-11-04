@@ -129,13 +129,13 @@ const planAsEOA = async (
   assert(right && 'connection' in right)
 
   if (
-    request.type === ExecutionActionType.RELAY_SAFE_TRANSACTION ||
-    request.type === ExecutionActionType.PROPOSE_SAFE_TRANSACTION
+    request.type === ExecutionActionType.SAFE_TRANSACTION ||
+    request.type === ExecutionActionType.PROPOSE_TRANSACTION
   ) {
     const typedData = typedDataForSafeTransaction({
       chainId: right.account.chain,
       safeAddress: right.account.address,
-      safeTransaction: request.safeTransaction,
+      safeTransaction: request.transaction,
     })
     return [
       {
@@ -165,6 +165,12 @@ const planAsSafe = async (
         waypoint.connection.type == ConnectionType.OWNS)
   )
 
+  assert(
+    request.type == ExecutionActionType.SAFE_TRANSACTION ||
+      request.type == ExecutionActionType.PROPOSE_TRANSACTION ||
+      request.type == ExecutionActionType.EXECUTE_TRANSACTION
+  )
+
   /*
    * We divide plan as safe in two: IN and OUT
    *
@@ -184,17 +190,17 @@ const planAsSafe = async (
    */
 
   // IN
-  let transaction
-  let more
+  let transaction = request.transaction
+  let more = [] as unknown as ExecutionPlan
   if (
-    request.type == ExecutionActionType.RELAY_SAFE_TRANSACTION ||
-    request.type == ExecutionActionType.PROPOSE_SAFE_TRANSACTION
+    request.type == ExecutionActionType.SAFE_TRANSACTION ||
+    request.type == ExecutionActionType.PROPOSE_TRANSACTION
   ) {
     assert(right && right.account.type == AccountType.SAFE)
     const typedData = typedDataForSafeTransaction({
       chainId: right.account.chain,
       safeAddress: right.account.address,
-      safeTransaction: request.safeTransaction,
+      safeTransaction: request.transaction,
     })
     transaction = {
       to: right.account.address,
@@ -207,10 +213,6 @@ const planAsSafe = async (
         signature: createPreApprovedSignature(waypoint.account.address),
       },
     ] as ExecutionPlan
-  } else {
-    assert(request.type == ExecutionActionType.EXECUTE_TRANSACTION)
-    transaction = request.transaction
-    more = [] as unknown as ExecutionPlan
   }
 
   // OUT
@@ -225,10 +227,10 @@ const planAsSafe = async (
     return [
       {
         type: shouldPropose(waypoint, options)
-          ? ExecutionActionType.PROPOSE_SAFE_TRANSACTION
-          : ExecutionActionType.RELAY_SAFE_TRANSACTION,
+          ? ExecutionActionType.PROPOSE_TRANSACTION
+          : ExecutionActionType.SAFE_TRANSACTION,
         safe: waypoint.account.prefixedAddress,
-        safeTransaction: approvalTransaction,
+        transaction: approvalTransaction,
         signature: null, // to be filled upstream
       },
       ...more,

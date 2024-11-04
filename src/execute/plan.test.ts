@@ -21,9 +21,9 @@ import { deployer, randomHash, testClient } from '../../test/client'
 import { deploySafe, enableModule } from '../../test/avatar'
 import { AccountType, ConnectionType, Route } from '../types'
 import {
-  ExecuteSafeTransactionAction,
   ExecuteTransactionAction,
   ExecutionActionType,
+  SafeTransactionAction,
   SignTypedDataAction,
 } from './types'
 
@@ -165,18 +165,15 @@ describe('plan', () => {
 
       expect(plan).toHaveLength(2)
 
-      let [sign, execute] = plan as [
-        SignTypedDataAction,
-        ExecuteSafeTransactionAction,
-      ]
+      let [sign, execute] = plan as [SignTypedDataAction, SafeTransactionAction]
 
       expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
       const signature = await signer.signTypedData(sign.data)
-      expect(execute.type).toEqual(ExecutionActionType.RELAY_SAFE_TRANSACTION)
+      expect(execute.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
 
       const transaction = await encodeExecTransaction(
         execute.safe,
-        execute.safeTransaction,
+        execute.transaction,
         signature
       )
 
@@ -226,7 +223,7 @@ describe('plan', () => {
       expect(plan).toHaveLength(2)
       const [sign, propose] = plan
       expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
-      expect(propose.type).toEqual(ExecutionActionType.PROPOSE_SAFE_TRANSACTION)
+      expect(propose.type).toEqual(ExecutionActionType.PROPOSE_TRANSACTION)
     })
   })
 
@@ -263,7 +260,7 @@ describe('plan', () => {
       expect(plan).toHaveLength(2)
       const [sign, propose] = plan
       expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
-      expect(propose.type).toEqual(ExecutionActionType.PROPOSE_SAFE_TRANSACTION)
+      expect(propose.type).toEqual(ExecutionActionType.PROPOSE_TRANSACTION)
     })
   })
 
@@ -318,8 +315,8 @@ describe('plan', () => {
 
       let [sign, execute1, execute2] = plan as [
         SignTypedDataAction,
-        ExecuteSafeTransactionAction,
-        ExecuteSafeTransactionAction,
+        SafeTransactionAction,
+        SafeTransactionAction,
       ]
 
       expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
@@ -329,11 +326,11 @@ describe('plan', () => {
       ])
 
       const signature = await eoa.signTypedData(sign.data)
-      expect(execute1.type).toEqual(ExecutionActionType.RELAY_SAFE_TRANSACTION)
+      expect(execute1.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
       expect(execute1.signature).toBe(null)
       const transaction1 = await encodeExecTransaction(
         execute1.safe,
-        execute1.safeTransaction,
+        execute1.transaction,
         signature
       )
 
@@ -344,11 +341,11 @@ describe('plan', () => {
       })
       expect(await testClient.getBalance({ address: receiver })).toEqual(0n)
 
-      expect(execute2.type).toEqual(ExecutionActionType.RELAY_SAFE_TRANSACTION)
+      expect(execute2.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
       expect(execute2.signature).not.toBe(null)
       const transaction2 = await encodeExecTransaction(
         execute2.safe,
-        execute2.safeTransaction,
+        execute2.transaction,
         execute2.signature as Hex
       )
 
@@ -431,7 +428,7 @@ describe('plan', () => {
 
       const [sign, execute] = plan as [
         SignTypedDataAction,
-        ExecuteSafeTransactionAction,
+        SafeTransactionAction,
       ]
 
       expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
@@ -441,11 +438,11 @@ describe('plan', () => {
       ])
 
       const signature = await eoa.signTypedData(sign.data)
-      expect(execute.type).toEqual(ExecutionActionType.RELAY_SAFE_TRANSACTION)
+      expect(execute.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
       expect(execute.signature).toBe(null)
       const transaction = await encodeExecTransaction(
         execute.safe,
-        execute.safeTransaction,
+        execute.transaction,
         signature
       )
 

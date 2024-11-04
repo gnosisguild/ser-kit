@@ -3,17 +3,16 @@ import type {
   MetaTransactionData,
   SafeTransactionData,
 } from '@safe-global/types-kit'
-
 import type { SafeTransactionOptionalProps } from '@safe-global/protocol-kit'
 
 import type { ChainId, PrefixedAddress } from '../types'
 
 export enum ExecutionActionType {
   EXECUTE_TRANSACTION = 'EXECUTE_TRANSACTION',
+  SAFE_TRANSACTION = 'SAFE_TRANSACTION',
+  PROPOSE_TRANSACTION = 'PROPOSE_TRANSACTION',
   SIGN_MESSAGE = 'SIGN_MESSAGE',
   SIGN_TYPED_DATA = 'SIGN_TYPED_DATA',
-  PROPOSE_SAFE_TRANSACTION = 'PROPOSE_SAFE_TRANSACTION',
-  RELAY_SAFE_TRANSACTION = 'RELAY_SAFE_TRANSACTION',
 }
 
 /** Represents a transaction to be sent from the specified account */
@@ -51,28 +50,29 @@ export interface SignTypedDataAction {
 }
 
 /** Represents an action for the given Safe transaction to be proposed for execution to the Safe Transaction Service */
-export interface ProposeSafeTransactionAction {
-  type: ExecutionActionType.PROPOSE_SAFE_TRANSACTION
+export interface ProposeTransactionAction {
+  type: ExecutionActionType.PROPOSE_TRANSACTION
   safe: PrefixedAddress
-  safeTransaction: SafeTransactionData
+  transaction: SafeTransactionData
   /** If set to null, the previous action's output will be inserted as signature */
   signature: `0x${string}` | null
 }
 
-export interface ExecuteSafeTransactionAction {
-  type: ExecutionActionType.RELAY_SAFE_TRANSACTION
+export interface SafeTransactionAction {
+  type: ExecutionActionType.SAFE_TRANSACTION
   safe: PrefixedAddress
-  safeTransaction: SafeTransactionData
+  transaction: SafeTransactionData
+
   /** If set to null, the previous action's output will be inserted as signature */
   signature: `0x${string}` | null
 }
 
 export type ExecutionAction =
   | ExecuteTransactionAction
+  | SafeTransactionAction
+  | ProposeTransactionAction
   | SignMessageAction
   | SignTypedDataAction
-  | ProposeSafeTransactionAction
-  | ExecuteSafeTransactionAction
 
 /**
  * An execution plan describes the actions that need to happen to get a given transaction executed through a given route.

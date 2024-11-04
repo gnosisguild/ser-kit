@@ -13,7 +13,6 @@ import {
 
 import { parsePrefixedAddress } from '../addresses'
 import { PrefixedAddress } from '../types'
-import { ExecuteSafeTransactionAction } from './types'
 
 export const avatarAbi = parseAbi([
   'function approveHash(bytes32 hashToApprove)',

@@ -1,11 +1,7 @@
 import { decodeFunctionData, parseAbi } from 'viem'
 import { type MetaTransactionData } from '@safe-global/types-kit'
 
-import { ExecuteSafeTransactionAction, ExecuteTransactionAction } from './types'
-
-export function unwrapRelayAction(action: ExecuteSafeTransactionAction) {
-  return action.safeTransaction
-}
+import { ExecuteTransactionAction } from './types'
 
 export function unwrapExecuteTransaction(
   action: ExecuteTransactionAction
