@@ -25,5 +25,9 @@ async function waitForNetwork() {
     params: [deployer.address, parseEther('100')],
   })
 
+  // for when we stop using forking
+  // await deployFactories({ provider: testClient as Eip1193Provider })
+  // await deployRolesMastercopies()
+
   console.log('Fork is ready!')
 }

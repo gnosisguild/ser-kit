@@ -14,7 +14,6 @@ import {
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 
 import { encodeMultiSend } from './multisend'
-import { calculateRouteId, collapseModifiers } from '../query/routes'
 import {
   AccountType,
   ChainId,
@@ -34,9 +33,7 @@ import {
   encodeApproveHashData,
   encodeExecTransactionFromModuleData,
 } from './avatar'
-import { encodeExecTransactionWithRoleData } from './roles'
 import { formatPrefixedAddress, parsePrefixedAddress } from '../addresses'
-import { useDefaultRolesForModules } from '../waypoints'
 import { typedDataForSafeTransaction } from '../eip712'
 
 import {
@@ -45,6 +42,7 @@ import {
   type ExecutionPlan,
   type SafeTransactionProperties,
 } from './types'
+import { encodeExecTransactionWithRoleData } from './roles'
 
 interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
@@ -80,32 +78,20 @@ export const planExecution = async (
     options?.multiSend ? [options.multiSend] : lastRolesAccount?.multisend
   )
 
-  const [chainId, safe] = parsePrefixedAddress(route.avatar)
+  const [chainId] = parsePrefixedAddress(route.avatar)
   if (!chainId) {
     throw new Error(
       `Invalid prefixed address for route avatar: ${route.avatar}`
     )
   }
 
-  // pre-processing: simplify route by using default roles for zodiac modules as role members and collapsing modifiers
-  let waypoints = useDefaultRolesForModules(route.waypoints)
-  waypoints = collapseModifiers(waypoints)
-
-  const safeTransaction = await populateSafeTransaction({
-    chainId,
-    safe,
-    transaction,
-    options,
-  })
-
-  let result: ExecutionPlan = [
+  const waypoints = route.waypoints
+  let result: ExecutionAction[] = [
     {
-      type: shouldPropose(waypoints[waypoints.length - 1] as Waypoint, options)
-        ? ExecutionActionType.PROPOSE_SAFE_TRANSACTION
-        : ExecutionActionType.EXECUTE_SAFE_TRANSACTION,
-      safe: route.avatar,
-      safeTransaction,
-      signature: null,
+      type: ExecutionActionType.EXECUTE_TRANSACTION,
+      transaction,
+      chain: chainId,
+      from: route.avatar,
     },
   ]
 
@@ -114,106 +100,107 @@ export const planExecution = async (
     const waypoint = waypoints[i]
     const [action, ...rest] = result
 
-    if ('connection' in waypoint) {
-      switch (waypoint.connection.type) {
-        case ConnectionType.OWNS: {
-          result = [
-            ...(await planAsSafeOwner(action, waypoints, i, options)),
-            ...rest,
-          ]
-          continue
-        }
-
-        case ConnectionType.IS_ENABLED: {
-          result = [...(await planAsSafeModule(action, waypoint)), ...rest]
-          continue
-        }
-
-        case ConnectionType.IS_MEMBER: {
-          result = [
-            ...(await planAsRoleMember(action, waypoint, options)),
-            ...rest,
-          ]
-          continue
-        }
-
-        default: {
-          throw new Error(
-            `Unsupported connection type: ${(waypoint as any).connection.type}`
-          )
-        }
-      }
+    if (waypoint.account.type == AccountType.EOA) {
+      result = [...(await planAsEOA(action, waypoints, i, options)), ...rest]
+    } else if (waypoint.account.type == AccountType.SAFE) {
+      result = [...(await planAsSafe(action, waypoints, i, options)), ...rest]
+    } else if (waypoint.account.type == AccountType.ROLES) {
+      result = [...(await planAsRoles(action, waypoints, i, options)), ...rest]
+    } else {
+      assert(waypoint.account.type == AccountType.DELAY)
+      throw new Error('TODO')
     }
   }
 
-  return result
+  return result as ExecutionPlan
 }
 
-const planAsSafeOwner = async (
+const planAsEOA = async (
   request: ExecutionAction,
   waypoints: Route['waypoints'],
   index: number,
   options: Options
-): Promise<ExecutionPlan> => {
-  const target = waypoints[index]
+): Promise<ExecutionAction[]> => {
+  const { prev, curr, next, chainId } = unfold(waypoints, index)
+  assert(prev == null)
+  assert(curr.account.type == AccountType.EOA)
+  assert(next && 'connection' in next)
+
   if (
-    target.account.type !== AccountType.SAFE ||
-    !('connection' in target) ||
-    target.connection.type !== ConnectionType.OWNS
+    request.type === ExecutionActionType.RELAY_SAFE_TRANSACTION ||
+    request.type === ExecutionActionType.PROPOSE_SAFE_TRANSACTION
   ) {
-    throw new Error(
-      'Expected a Safe account connected through an OWNS connection'
-    )
-  }
-  assert(
-    request.type == ExecutionActionType.EXECUTE_SAFE_TRANSACTION ||
-      request.type == ExecutionActionType.PROPOSE_SAFE_TRANSACTION
-  )
-
-  const [chainId] = parsePrefixedAddress(target.account.prefixedAddress)
-  assert(!!chainId)
-
-  const owner = waypoints[index - 1]
-  const ownerIsEoa = owner.account.type == AccountType.EOA
-  const ownerIsSafe = owner.account.type == AccountType.SAFE
-
-  const typedData = typedDataForSafeTransaction({
-    chainId: target.account.chain,
-    safeAddress: target.account.address,
-    safeTransaction: request.safeTransaction,
-  })
-
-  if (ownerIsEoa) {
-    /*
-     * We will produce an ECDSA signature from owner, authorizing
-     * the transaction that will be executed downstream at safe
-     */
+    const typedData = typedDataForSafeTransaction({
+      chainId: next.account.chain,
+      safeAddress: next.account.address,
+      safeTransaction: request.safeTransaction,
+    })
     return [
       {
         type: ExecutionActionType.SIGN_TYPED_DATA,
         data: typedData,
-        from: owner.account.prefixedAddress,
+        from: curr.account.prefixedAddress,
       },
+      request,
+    ]
+  }
+
+  return [request]
+}
+
+const planAsSafe = async (
+  request: ExecutionAction,
+  waypoints: Route['waypoints'],
+  index: number,
+  options: Options
+): Promise<ExecutionAction[]> => {
+  const curr = waypoints[index]
+  assert(curr.account.type == AccountType.SAFE)
+
+  if (!('connection' in curr)) {
+    throw new Error('Expected a Safe connected to')
+  }
+  const [chainId] = parsePrefixedAddress(curr.account.prefixedAddress)
+  assert(!!chainId)
+
+  const prev = index > 0 ? waypoints[index - 1] : null
+  const next = index < waypoints.length + 1 ? waypoints[index + 1] : null
+  assert(curr.connection.from == prev?.account.prefixedAddress)
+
+  if (request.type == ExecutionActionType.EXECUTE_TRANSACTION) {
+    const safeTransaction = await populateSafeTransaction({
+      chainId,
+      safe: curr.account.address,
+      transaction: request.transaction,
+      options,
+    })
+    return [
       {
-        ...request,
+        type: shouldPropose(curr, options)
+          ? ExecutionActionType.PROPOSE_SAFE_TRANSACTION
+          : ExecutionActionType.RELAY_SAFE_TRANSACTION,
+        safe: curr.account.prefixedAddress,
+        safeTransaction,
         signature: null, // to be filled
       },
     ]
-  } else {
-    assert(ownerIsSafe)
-    /**
-     * When upstream owner is another SAFE:
-     * We could implement complex recursive code for generating fully off-chain
-     * signatures when possible. However, as a first approach for the sake of
-     * stability and simplicity, we will opt to make any intermediate safes to
-     * post onchain approvals, and then utilize use pre-approved hashes downstream.
-     */
+  }
 
+  if (
+    request.type == ExecutionActionType.RELAY_SAFE_TRANSACTION ||
+    request.type == ExecutionActionType.PROPOSE_SAFE_TRANSACTION
+  ) {
+    assert(next?.account.type == AccountType.SAFE)
+    const typedData = typedDataForSafeTransaction({
+      chainId: next.account.chain,
+      safeAddress: next.account.address,
+      safeTransaction: request.safeTransaction,
+    })
     const approvalTransaction = await populateSafeTransaction({
       chainId,
-      safe: owner.account.address,
+      safe: curr.account.address,
       transaction: {
-        to: target.account.address,
+        to: next.account.address,
         value: '0',
         data: encodeApproveHashData(hashTypedData(typedData)),
       },
@@ -221,147 +208,85 @@ const planAsSafeOwner = async (
     })
 
     return [
-      // do the approval from the owner
       {
-        type: shouldPropose(owner, options)
+        type: shouldPropose(curr, options)
           ? ExecutionActionType.PROPOSE_SAFE_TRANSACTION
-          : ExecutionActionType.EXECUTE_SAFE_TRANSACTION,
-        safe: owner.account.prefixedAddress,
+          : ExecutionActionType.RELAY_SAFE_TRANSACTION,
+        safe: curr.account.prefixedAddress,
         safeTransaction: approvalTransaction,
-        signature: null,
+        signature: null, // to be filled upstream
       },
-      // patch downstream
       {
         ...request,
-        signature: createPreApprovedSignature(owner.account.address),
+        signature: createPreApprovedSignature(curr.account.address),
       },
     ]
   }
+
+  throw new Error(`Unsupported/Unexpected (TODO better message)`)
 }
 
-const planAsSafeModule = async (
+const planAsRoles = async (
   request: ExecutionAction,
-  waypoint: Waypoint
-): Promise<ExecutionPlan> => {
-  if (request.type === ExecutionActionType.EXECUTE_TRANSACTION) {
-    return [
-      {
-        type: ExecutionActionType.EXECUTE_TRANSACTION,
-        transaction: {
-          to: waypoint.account.address,
-          data: encodeExecTransactionFromModuleData(request.transaction),
-          value: '0',
-        },
-        from: waypoint.connection.from,
-        chain: waypoint.account.chain,
-      },
-    ]
-  }
+  waypoints: Route['waypoints'],
+  index: number,
+  options: Options
+): Promise<ExecutionAction[]> => {
+  /*
+   * Once we add backend support, we will be able
+   * to detect relay friendliness on roles mods
+   * and an option to relay will be intruced here as
+   * well
+   */
 
-  if (
-    request.type === ExecutionActionType.SIGN_MESSAGE ||
-    request.type === ExecutionActionType.SIGN_TYPED_DATA
-  ) {
-    // TODO use SignMessageLib (via delegatecall) to approve the transaction hash onchain
-    // https://github.com/safe-global/safe-smart-account/blob/499b17ad0191b575fcadc5cb5b8e3faeae5391ae/contracts/libraries/SignMessageLib.sol
-    throw new Error('Not implemented')
-  }
+  const { prev, curr, next, chainId } = unfold(waypoints, index)
+  assert(curr.account.type == AccountType.ROLES)
 
-  throw new Error(
-    'Can not handle the given action type as a Safe module: ' + request.type
+  const validUpstream =
+    prev != null &&
+    'connection' in curr &&
+    curr.connection.type == ConnectionType.IS_MEMBER
+  if (!validUpstream) {
+    throw new Error(`Invalid Roles upstream relationship`)
+  }
+  assert(curr.connection.type == ConnectionType.IS_MEMBER)
+
+  const validDownstream =
+    next?.connection.type == ConnectionType.IS_ENABLED &&
+    (next?.account.type == AccountType.SAFE ||
+      next?.account.type == AccountType.DELAY)
+  if (!validDownstream) {
+    throw new Error(`Invalid Roles downstream relationship`)
+  }
+  assert(
+    [
+      ExecutionActionType.EXECUTE_TRANSACTION,
+      ExecutionActionType.RELAY_SAFE_TRANSACTION,
+      ExecutionActionType.PROPOSE_SAFE_TRANSACTION,
+    ].includes(request.type)
   )
-}
 
-const planAsRoleMember = async (
-  request: ExecutionAction,
-  waypoint: Waypoint,
-  options?: Options
-): Promise<ExecutionPlan> => {
-  if (
-    waypoint.account.type !== AccountType.ROLES ||
-    waypoint.connection.type !== ConnectionType.IS_MEMBER
-  ) {
-    throw new Error(
-      'Expected a Roles account connected through an IS_MEMBER connection'
-    )
-  }
-
-  const version = waypoint.account.version
+  const version = curr.account.version
   const role =
-    options?.roles?.[waypoint.connection.from] ||
-    waypoint.connection.defaultRole ||
-    waypoint.connection.roles[0]
+    options?.roles?.[curr.connection.from] ||
+    curr.connection.defaultRole ||
+    curr.connection.roles[0]
 
-  if (!role) {
-    throw new Error('Could not determine a role')
-  }
+  const transaction: MetaTransactionData =
+    (request as any).transaction || (request as any).safeTransaction
 
-  if (request.type === ExecutionActionType.EXECUTE_TRANSACTION) {
-    return [
-      {
-        type: ExecutionActionType.EXECUTE_TRANSACTION,
-        transaction: {
-          to: waypoint.account.address,
-          data: encodeExecTransactionWithRoleData(
-            request.transaction,
-            role,
-            version
-          ),
-          value: '0',
-        },
-        from: waypoint.connection.from,
-        chain: waypoint.account.chain,
+  return [
+    {
+      type: ExecutionActionType.EXECUTE_TRANSACTION,
+      transaction: {
+        to: curr.account.address,
+        data: encodeExecTransactionWithRoleData(transaction, role, version),
+        value: '0',
       },
-    ]
-  }
-
-  if (
-    request.type === ExecutionActionType.SIGN_MESSAGE ||
-    request.type === ExecutionActionType.SIGN_TYPED_DATA
-  ) {
-    throw new Error('Not possible to let Safe sign messages as role member')
-  }
-
-  throw new Error(
-    'Can not handle the given action type as a role member: ' + request.type
-  )
-}
-
-/** Splits the route into segments at all Safe nodes that require extra signatures for execution to continue. */
-export const splitExecutableSegments = (route: Route): Route[] => {
-  const segments: Route[] = []
-  let segmentWaypoints = [] as unknown as Route['waypoints']
-
-  for (const waypoint of route.waypoints) {
-    segmentWaypoints.push(waypoint)
-
-    const splitRequired =
-      waypoint.account.type === AccountType.SAFE &&
-      'connection' in waypoint &&
-      waypoint.connection.type === ConnectionType.OWNS &&
-      waypoint.account.threshold > 1
-
-    if (splitRequired) {
-      segments.push({
-        id: calculateRouteId(segmentWaypoints),
-        waypoints: segmentWaypoints,
-        avatar: waypoint.account.prefixedAddress,
-        initiator: segmentWaypoints[0].account.prefixedAddress,
-      })
-
-      segmentWaypoints = [{ account: waypoint.account }]
-    }
-  }
-
-  if (segmentWaypoints.length > 1) {
-    segments.push({
-      id: calculateRouteId(segmentWaypoints),
-      waypoints: segmentWaypoints,
-      avatar: route.avatar,
-      initiator: segmentWaypoints[0].account.prefixedAddress,
-    })
-  }
-  return segments
+      from: prev.account.prefixedAddress,
+      chain: chainId,
+    },
+  ]
 }
 
 function shouldPropose(waypoint: Waypoint | StartingPoint, options?: Options) {
@@ -421,4 +346,30 @@ async function populateSafeTransaction({
     refundReceiver: getAddress(defaults?.refundReceiver || zeroAddress),
     nonce: defaults?.nonce || nonce,
   } as unknown as SafeTransactionData
+}
+
+function unfold(waypoints: Route['waypoints'], index: number) {
+  const curr = waypoints[index]
+  const prev = index > 0 ? waypoints[index - 1] : null
+  const next = index < waypoints.length + 1 ? waypoints[index + 1] : null
+  if ('connection' in curr) {
+    assert(curr.connection.from == prev?.account.prefixedAddress)
+  }
+
+  const [chainId] = parsePrefixedAddress(
+    waypoints[index].account.prefixedAddress
+  )
+  assert(!!chainId)
+
+  return {
+    prev,
+    curr,
+    next,
+    chainId,
+  } as {
+    prev: StartingPoint | Waypoint | null
+    curr: StartingPoint | Waypoint
+    next: Waypoint | null
+    chainId: ChainId
+  }
 }

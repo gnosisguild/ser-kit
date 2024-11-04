@@ -1,4 +1,10 @@
-import { createTestClient, http, publicActions, walletActions } from 'viem'
+import {
+  createTestClient,
+  hashMessage,
+  http,
+  publicActions,
+  walletActions,
+} from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { mainnet } from 'viem/chains'
 
@@ -15,3 +21,5 @@ export const testClient = createTestClient({
 export const deployer = privateKeyToAccount(
   '0x0000000000000000000000000000000000000000000000000000000000badfed'
 )
+
+export const randomHash = () => hashMessage(String(Math.random()))

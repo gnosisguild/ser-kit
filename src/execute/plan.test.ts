@@ -1,6 +1,13 @@
-import assert from 'assert'
-import { describe, it, expect, test } from 'bun:test'
-import { Address, getAddress, hashMessage, Hex, parseEther, toHex } from 'viem'
+import { describe, it, expect } from 'bun:test'
+import {
+  Address,
+  getAddress,
+  Hash,
+  hashMessage,
+  Hex,
+  parseEther,
+  toHex,
+} from 'viem'
 
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 import { OperationType } from '@safe-global/types-kit'
@@ -8,16 +15,18 @@ import { OperationType } from '@safe-global/types-kit'
 import { planExecution } from './plan'
 import { formatPrefixedAddress, parsePrefixedAddress } from '../addresses'
 
-import { deployer, testClient } from '../../test/client'
+import { deployer, randomHash, testClient } from '../../test/client'
 import { deploySafe } from '../../test/avatar'
 import { AccountType, ConnectionType, Route } from '../types'
 import {
   ExecuteSafeTransactionAction,
+  ExecuteTransactionAction,
   ExecutionActionType,
   SignTypedDataAction,
 } from './types'
 import { privateKeyToAccount } from 'viem/accounts'
 import { encodeExecTransaction } from './avatar'
+import { setupRolesMod } from '../../test/roles'
 
 const makeAddress = (number: number): Address =>
   getAddress(toHex(number, { size: 20 }))
@@ -161,7 +170,7 @@ describe('plan', () => {
 
       expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
       const signature = await signer.signTypedData(sign.data)
-      expect(execute.type).toEqual(ExecutionActionType.EXECUTE_SAFE_TRANSACTION)
+      expect(execute.type).toEqual(ExecutionActionType.RELAY_SAFE_TRANSACTION)
 
       const transaction = await encodeExecTransaction(
         execute.safe,
@@ -278,9 +287,7 @@ describe('plan', () => {
       ])
 
       const signature = await signer.signTypedData(sign.data)
-      expect(execute1.type).toEqual(
-        ExecutionActionType.EXECUTE_SAFE_TRANSACTION
-      )
+      expect(execute1.type).toEqual(ExecutionActionType.RELAY_SAFE_TRANSACTION)
       expect(execute1.signature).toBe(null)
       const transaction1 = await encodeExecTransaction(
         execute1.safe,
@@ -295,9 +302,7 @@ describe('plan', () => {
       })
       expect(await testClient.getBalance({ address: receiver })).toEqual(0n)
 
-      expect(execute2.type).toEqual(
-        ExecutionActionType.EXECUTE_SAFE_TRANSACTION
-      )
+      expect(execute2.type).toEqual(ExecutionActionType.RELAY_SAFE_TRANSACTION)
       expect(execute2.signature).not.toBe(null)
       const transaction2 = await encodeExecTransaction(
         execute2.safe,
@@ -315,6 +320,101 @@ describe('plan', () => {
         parseEther('1')
       )
     })
+  })
+
+  describe('EOA --member--> ROLES --enabled--> SAFE*/*', () => {
+    it('plans execution', async () => {
+      const owner = privateKeyToAccount(randomHash())
+      const member = privateKeyToAccount(randomHash())
+      const receiver = privateKeyToAccount(randomHash())
+
+      /*
+       * Steps:
+       * Fund a safe with 2 ETH
+       * Setup a role for sending eth from the safe
+       * Use member key to send 0.123 ETH to receiver
+       */
+      const safe = await deploySafe({
+        owners: [owner.address],
+        threshold: 1,
+        creationNonce: BigInt(randomHash()),
+      })
+
+      await testClient.sendTransaction({
+        account: deployer,
+        to: owner.address,
+        value: parseEther('1'),
+      })
+
+      await testClient.sendTransaction({
+        account: deployer,
+        to: member.address,
+        value: parseEther('1'),
+      })
+
+      // fund the safe with 2 eth
+      await testClient.sendTransaction({
+        account: deployer,
+        to: safe,
+        value: parseEther('1'),
+      })
+
+      const { roles, roleId } = await setupRolesMod({
+        owner: owner,
+        avatar: safe,
+        member: member.address,
+        destination: receiver.address,
+      })
+
+      const route = createRouteEoaRolesSafe({
+        eoa: member.address,
+        roles,
+        roleId,
+        safe,
+      })
+
+      const plan = await planExecution(
+        [
+          {
+            data: '0x',
+            to: receiver.address,
+            value: String(parseEther('0.123')),
+          },
+        ],
+        route,
+        {
+          providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        }
+      )
+
+      expect(plan).toHaveLength(1)
+
+      const [execute] = plan as [ExecuteTransactionAction]
+      expect(execute.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
+
+      expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('1')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(0n)
+      await testClient.sendTransaction({
+        account: member,
+        to: execute.transaction.to,
+        data: execute.transaction.data as `0x{string}`,
+        value: BigInt(execute.transaction.value),
+      })
+      expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('0.877')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(parseEther('0.123'))
+    })
+  })
+
+  describe('EOA --member--> ROLES --enabled--> SAFE*/* --owns--> SAFE1/1', () => {
+    // TODO
   })
 
   describe('EOA --member--> ROLES --enabled--> DELAY --enabled--> SAFE*/*', () => {
@@ -441,4 +541,60 @@ async function setupEoaSafeSafe({
   } as Route
 
   return { route, eoa, s1, s2 }
+}
+
+function createRouteEoaRolesSafe({
+  eoa,
+  roles,
+  roleId,
+  safe,
+}: {
+  eoa: Address
+  roles: Address
+  roleId: Hash
+  safe: Address
+}): Route {
+  return {
+    waypoints: [
+      {
+        account: {
+          type: AccountType.EOA,
+          prefixedAddress: withPrefix(eoa),
+          address: eoa as `0x${string}`,
+        },
+      },
+      {
+        account: {
+          type: AccountType.ROLES,
+          address: roles as `0x${string}`,
+          prefixedAddress: withPrefix(roles),
+          chain: testClient.chain.id,
+          multisend: [] as `0x${string}`[],
+          version: 2,
+        },
+        connection: {
+          type: ConnectionType.IS_MEMBER,
+          roles: [roleId],
+          from: withPrefix(eoa),
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          address: safe as `0x${string}`,
+          prefixedAddress: withPrefix(safe),
+
+          chain: testClient.chain.id,
+          threshold: 1,
+        },
+        connection: {
+          type: ConnectionType.IS_ENABLED,
+          from: withPrefix(roles),
+        },
+      },
+    ],
+    id: 'test',
+    initiator: withPrefix(eoa),
+    avatar: withPrefix(safe),
+  }
 }

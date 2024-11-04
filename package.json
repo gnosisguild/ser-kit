@@ -23,7 +23,7 @@
     "check:format": "prettier --list-different .",
     "fix:format": "prettier --write .",
     "anvil": "anvil --port 8553 --fork-url https://virtual.mainnet.rpc.tenderly.co/65b2a366-4d33-4580-a244-e6bcf0696554",
-    "test": "bun test"
+    "test": "bun test --timeout 10000"
   },
   "devDependencies": {
     "@types/bun": "^1.1.12",
@@ -34,10 +34,11 @@
     "wait-on": "^7.2.0"
   },
   "dependencies": {
+    "@gnosis-guild/zodiac-core": "^2.0.4",
     "@safe-global/api-kit": "^2.5.3",
     "@safe-global/protocol-kit": "^5.0.3",
     "@safe-global/safe-deployments": "^1.37.13",
     "@safe-global/types-kit": "^1.0.0",
-    "viem": "^2.21.34"
+    "viem": "^2.21.38"
   }
 }

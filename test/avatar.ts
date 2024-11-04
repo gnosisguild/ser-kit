@@ -183,7 +183,8 @@ async function calculateAddress({
   return getAddress(await safe.getAddress())
 }
 
-const safeAbi = parseAbi([
+export const safeAbi = parseAbi([
+  'function enableModule(address module)',
   'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures) payable returns (bool success)',
   'function setup(address[] _owners, uint256 _threshold, address to, bytes data, address fallbackHandler, address paymentToken, uint256 payment, address paymentReceiver)',
 ])
