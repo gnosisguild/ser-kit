@@ -15,7 +15,6 @@ import {
 import { randomHash, testClient } from './client'
 import { safeAbi } from './avatar'
 import { createPreApprovedSignature } from '../src/execute/signatures'
-import { OperationType } from '@safe-global/types-kit'
 
 export async function deployRolesMastercopies() {
   const filePath = `${__dirname}/roles.mastercopies.json`

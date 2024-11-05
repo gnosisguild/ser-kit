@@ -17,9 +17,9 @@ import { OperationType } from '@safe-global/types-kit'
 import { planExecution } from './plan'
 import { formatPrefixedAddress, parsePrefixedAddress } from '../addresses'
 
-import { deployer, randomHash, testClient } from '../../test/client'
+import { deployer, fund, randomHash, testClient } from '../../test/client'
 import { deploySafe, enableModule } from '../../test/avatar'
-import { AccountType, ConnectionType, Route } from '../types'
+import { AccountType, ConnectionType, PrefixedAddress, Route } from '../types'
 import {
   ExecuteTransactionAction,
   ExecutionActionType,
@@ -29,10 +29,7 @@ import {
 
 import { encodeExecTransaction } from './avatar'
 import { setupRolesMod } from '../../test/roles'
-import { createPreApprovedSignature } from './signatures'
-
-const makeAddress = (number: number): Address =>
-  getAddress(toHex(number, { size: 20 }))
+import { setupDelayMod } from '../../test/delay'
 
 const withPrefix = (address: Address) =>
   formatPrefixedAddress(testClient.chain.id, address)
@@ -363,20 +360,20 @@ describe('plan', () => {
 
   describe('EOA --owns--> SAFE1/1 --enabled--> SAFE1/1', () => {
     it('plans execution', async () => {
-      const eoa = privateKeyToAccount(hashMessage('eoa'))
-      const someoneelse = privateKeyToAccount(hashMessage('someoneelse'))
-      const receiver = privateKeyToAccount(hashMessage('receiver'))
+      const eoa = privateKeyToAccount(randomHash())
+      const someoneelse = privateKeyToAccount(randomHash())
+      const receiver = privateKeyToAccount(randomHash())
 
       const safe1 = await deploySafe({
         owners: [eoa.address],
         threshold: 1,
-        creationNonce: BigInt(hashMessage('safe1')),
+        creationNonce: BigInt(randomHash()),
       })
 
       const safe2 = await deploySafe({
         owners: [someoneelse.address],
         threshold: 1,
-        creationNonce: BigInt(hashMessage('safe2')),
+        creationNonce: BigInt(randomHash()),
       })
 
       await testClient.sendTransaction({
@@ -543,6 +540,106 @@ describe('plan', () => {
       })
       expect(await testClient.getBalance({ address: safe })).toEqual(
         parseEther('0.877')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(parseEther('0.123'))
+    })
+  })
+
+  describe('EOA --enabled--> DELAY --enabled--> SAFE*/*', () => {
+    it('plans execution', async () => {
+      const owner = privateKeyToAccount(randomHash())
+      const eoa = privateKeyToAccount(randomHash())
+      const receiver = privateKeyToAccount(randomHash())
+      const someone = privateKeyToAccount(randomHash())
+
+      const safe = await deploySafe({
+        owners: [owner.address],
+        threshold: 1,
+        creationNonce: BigInt(randomHash()),
+      })
+
+      await fund([
+        owner.address,
+        eoa.address,
+        [safe, parseEther('10')],
+        someone.address,
+      ])
+
+      const cooldown = 100
+
+      const delay = await setupDelayMod({
+        owner,
+        avatar: safe,
+        module: eoa.address,
+        cooldown,
+      })
+
+      const route = createRouteEoaDelaySafe({
+        eoa: eoa.address,
+        delay,
+        safe,
+      })
+
+      const plan = await planExecution(
+        [
+          {
+            data: '0x',
+            to: receiver.address,
+            value: String(parseEther('0.123')),
+          },
+        ],
+        route,
+        {
+          providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        }
+      )
+
+      expect(plan).toHaveLength(2)
+
+      const [execute1, execute2] = plan as [
+        ExecuteTransactionAction,
+        ExecuteTransactionAction,
+      ]
+      expect(execute1.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
+      expect(execute2.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
+
+      expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('10')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(0n)
+
+      await testClient.sendTransaction({
+        account: eoa,
+        to: execute1.transaction.to,
+        data: execute1.transaction.data as any,
+        value: BigInt(execute1.transaction.value),
+      })
+
+      await testClient.request({
+        method: 'anvil_mine' as any,
+        params: [cooldown],
+      })
+
+      expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('10')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(0n)
+
+      await testClient.sendTransaction({
+        account: someone,
+        to: execute2.transaction.to,
+        data: execute2.transaction.data as any,
+        value: BigInt(execute2.transaction.value),
+      })
+
+      expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('10') - parseEther('0.123')
       )
       expect(
         await testClient.getBalance({ address: receiver.address })
@@ -765,6 +862,57 @@ function createRouteEoaRolesSafe({
     ],
     id: 'test',
     initiator: `eoa:${eoa}`,
+    avatar: withPrefix(safe),
+  }
+}
+
+function createRouteEoaDelaySafe({
+  eoa,
+  delay,
+  safe,
+}: {
+  eoa: Address
+  delay: Address
+  safe: Address
+}): Route {
+  return {
+    waypoints: [
+      {
+        account: {
+          type: AccountType.EOA,
+          prefixedAddress: `eoa:${eoa}` as PrefixedAddress,
+          address: eoa as `0x${string}`,
+        },
+      },
+      {
+        account: {
+          type: AccountType.DELAY,
+          address: delay as any,
+          prefixedAddress: withPrefix(delay),
+          chain: testClient.chain.id,
+        },
+        connection: {
+          type: ConnectionType.IS_ENABLED,
+          from: `eoa:${eoa}` as PrefixedAddress,
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          address: safe as `0x${string}`,
+          prefixedAddress: withPrefix(safe),
+
+          chain: testClient.chain.id,
+          threshold: 1,
+        },
+        connection: {
+          type: ConnectionType.IS_ENABLED,
+          from: withPrefix(delay),
+        },
+      },
+    ],
+    id: 'test',
+    initiator: `eoa:${eoa}` as PrefixedAddress,
     avatar: withPrefix(safe),
   }
 }

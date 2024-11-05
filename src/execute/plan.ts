@@ -29,11 +29,14 @@ import {
 import { type CustomProviders } from './safe'
 
 import { createPreApprovedSignature } from './signatures'
+import { unwrapExecuteTransaction } from './action'
 import {
   avatarAbi,
   encodeApproveHashData,
   encodeExecTransactionFromModuleData,
 } from './avatar'
+import { encodeExecTransactionWithRoleData } from './roles'
+import { encodeExecuteNextTxData } from './delay'
 import { formatPrefixedAddress, parsePrefixedAddress } from '../addresses'
 import { typedDataForSafeTransaction } from '../eip712'
 
@@ -44,8 +47,6 @@ import {
   type ExecutionPlan,
   type SafeTransactionProperties,
 } from './types'
-import { encodeExecTransactionWithRoleData } from './roles'
-import { unwrapExecuteTransaction } from './action'
 
 interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
@@ -110,8 +111,7 @@ export const planExecution = async (
     } else if (waypoint.account.type == AccountType.ROLES) {
       result = [...(await planAsRoles(action, waypoints, i, options)), ...rest]
     } else {
-      assert(waypoint.account.type == AccountType.DELAY)
-      throw new Error('TODO')
+      result = [...(await planAsDelay(action, waypoints, i)), ...rest]
     }
   }
 
@@ -295,6 +295,46 @@ const planAsRoles = async (
       transaction: {
         to: waypoint.account.address,
         data: encodeExecTransactionWithRoleData(transaction, role, version),
+        value: '0',
+      },
+      from: left.account.prefixedAddress,
+    },
+  ]
+}
+
+const planAsDelay = async (
+  request: ExecutionAction,
+  waypoints: Route['waypoints'],
+  index: number
+): Promise<ExecutionAction[]> => {
+  /*
+   * coming soon: relays for Modules
+   */
+  const { waypoint, left } = pointers(waypoints, index)
+  assert(waypoint.account.type == AccountType.DELAY)
+  assert(left != null)
+
+  const transaction = unwrapExecuteTransaction(
+    request as ExecuteTransactionAction
+  )
+
+  return [
+    {
+      type: ExecutionActionType.EXECUTE_TRANSACTION,
+      chain: waypoint.account.chain,
+      transaction: {
+        to: waypoint.account.address,
+        data: encodeExecTransactionFromModuleData(transaction),
+        value: '0',
+      },
+      from: left.account.prefixedAddress,
+    },
+    {
+      type: ExecutionActionType.EXECUTE_TRANSACTION,
+      chain: waypoint.account.chain,
+      transaction: {
+        to: waypoint.account.address,
+        data: encodeExecuteNextTxData(transaction),
         value: '0',
       },
       from: left.account.prefixedAddress,

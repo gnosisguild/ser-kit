@@ -22,7 +22,7 @@ async function waitForNetwork() {
   await testClient.reset()
   await testClient.request({
     method: 'anvil_setBalance' as any,
-    params: [deployer.address, parseEther('100')],
+    params: [deployer.address, parseEther('100000')],
   })
 
   // for when we stop using forking
