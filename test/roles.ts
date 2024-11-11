@@ -1,10 +1,4 @@
-import {
-  Address,
-  encodeFunctionData,
-  parseAbi,
-  PrivateKeyAccount,
-  zeroAddress,
-} from 'viem'
+import { Address, encodeFunctionData, parseAbi, PrivateKeyAccount } from 'viem'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 import { deployProxy } from '@gnosis-guild/zodiac-core'
 
@@ -17,19 +11,21 @@ import { randomHash, testClient } from './client'
 export async function setupRolesMod({
   owner,
   avatar,
+  target,
   member,
   destination,
 }: {
   owner: PrivateKeyAccount
   avatar: Address
+  target?: Address
   member: Address
   destination: Address
 }) {
   const roleId = randomHash()
   const roles = await deployRolesMod({
     owner: owner.address,
-    target: avatar,
-    avatar,
+    avatar: avatar,
+    target: target || avatar,
   })
 
   await testClient.sendTransaction({
@@ -79,7 +75,7 @@ async function deployRolesMod({
     mastercopy: '0x9646fDAD06d3e24444381f44362a3B0eB343D337',
     setupArgs: {
       types: ['address', 'address', 'address'],
-      values: [owner, target, avatar],
+      values: [owner, avatar, target],
     },
     saltNonce: BigInt(randomHash()),
     provider: testClient as Eip1193Provider,

@@ -60,7 +60,7 @@ export async function enableModuleInSafe({
   safe: string
   module: string
 }) {
-  await testClient.sendTransaction({
+  return testClient.sendTransaction({
     account: owner,
     to: safe,
     data: encodeFunctionData({

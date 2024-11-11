@@ -9,7 +9,7 @@ import { planExecution } from './plan'
 import { formatPrefixedAddress, parsePrefixedAddress } from '../addresses'
 
 import { deployer, fund, randomHash, testClient } from '../../test/client'
-import { deploySafe, enableModuleInSafe, safeAbi } from '../../test/avatar'
+import { deploySafe, enableModuleInSafe } from '../../test/avatar'
 import { AccountType, ConnectionType, PrefixedAddress, Route } from '../types'
 import {
   ExecuteTransactionAction,
@@ -19,91 +19,13 @@ import {
 } from './types'
 
 import { setupRolesMod } from '../../test/roles'
-import { setupDelayMod } from '../../test/delay'
+import { deployDelayMod, enableModule } from '../../test/delay'
 import { encodeSafeTransaction } from './action'
 
 const withPrefix = (address: Address) =>
   formatPrefixedAddress(testClient.chain.id, address)
 
 describe('plan', () => {
-  it.skip('should correctly plan execution through a role', async () => {
-    const plan = await planExecution(
-      [
-        {
-          data: '0x70d0f384000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000002200000000000000000000000000eb5b03c0303f2f47cd81d7be4275af8ed347576000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000669cf0cfd096c5d610d4455bcae4bff719d18345939c5d6b20d56c6a1f37d0247ad10f7100000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000016617262697472756d666f756e646174696f6e2e6574680000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008736e617073686f7400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000027b7d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000008736e617073686f740000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005302e312e34000000000000000000000000000000000000000000000000000000',
-          operation: 1,
-          to: '0xa58Cf66d0f14AEFb2389c6998f6ad219dd4885c1',
-          value: '0',
-        },
-      ],
-      {
-        waypoints: [
-          {
-            account: {
-              type: AccountType.SAFE,
-              prefixedAddress:
-                'arb1:0x83e3ca8ddebbd81c3bcdc3aa9e3afcd2bfb7c360',
-              address: '0x83e3ca8ddebbd81c3bcdc3aa9e3afcd2bfb7c360',
-              chain: 42161,
-              threshold: 3,
-            },
-          },
-          {
-            account: {
-              type: AccountType.ROLES,
-              prefixedAddress:
-                'arb1:0xd8c71be42ae496286b8b75929f9cec967ade7455',
-              address: '0xd8c71be42ae496286b8b75929f9cec967ade7455',
-              chain: 42161,
-              version: 2,
-              multisend: ['0xa238cbeb142c10ef7ad8442c6d1f9e89e07e7761'],
-            },
-            connection: {
-              type: ConnectionType.IS_MEMBER,
-              from: 'arb1:0x83e3ca8ddebbd81c3bcdc3aa9e3afcd2bfb7c360',
-              roles: [
-                '0x6172630000000000000000000000000000000000000000000000000000000000',
-              ],
-            },
-          },
-          {
-            account: {
-              type: AccountType.SAFE,
-              prefixedAddress:
-                'arb1:0x0eb5b03c0303f2f47cd81d7be4275af8ed347576',
-              address: '0x0eb5b03c0303f2f47cd81d7be4275af8ed347576',
-              chain: 42161,
-              threshold: 5,
-            },
-            connection: {
-              type: ConnectionType.IS_ENABLED,
-              from: 'arb1:0xd8c71be42ae496286b8b75929f9cec967ade7455',
-            },
-          },
-        ],
-        id: 'test',
-        initiator: 'arb1:0x83e3ca8ddebbd81c3bcdc3aa9e3afcd2bfb7c360',
-        avatar: 'arb1:0x0eb5b03c0303f2f47cd81d7be4275af8ed347576',
-      },
-      {
-        providers: { [testClient.chain.id]: testClient as Eip1193Provider },
-      }
-    )
-
-    expect(plan).toEqual([
-      {
-        type: ExecutionActionType.EXECUTE_TRANSACTION,
-        transaction: {
-          to: '0xd8c71be42ae496286b8b75929f9cec967ade7455',
-          data: '0xc6fe8747000000000000000000000000a58cf66d0f14aefb2389c6998f6ad219dd4885c1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000016172630000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000002e470d0f384000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000002200000000000000000000000000eb5b03c0303f2f47cd81d7be4275af8ed347576000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000669cf0cfd096c5d610d4455bcae4bff719d18345939c5d6b20d56c6a1f37d0247ad10f7100000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000016617262697472756d666f756e646174696f6e2e6574680000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008736e617073686f7400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000027b7d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000008736e617073686f740000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005302e312e3400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
-          value: '0',
-        },
-        from: 'arb1:0x83e3ca8ddebbd81c3bcdc3aa9e3afcd2bfb7c360',
-        chain: 42161,
-      },
-    ])
-  })
-
   describe('EOA --owns--> SAFE-1/1', () => {
     it('plans execution', async () => {
       const signer = privateKeyToAccount(randomHash())
@@ -466,7 +388,7 @@ describe('plan', () => {
         destination: receiver.address,
       })
 
-      await enableModuleInSafe({ owner, safe, module: roles })
+      await enableModuleInSafe({ safe, owner, module: roles })
 
       const route = createRouteEoaRolesSafe({
         eoa: member.address as any,
@@ -538,12 +460,14 @@ describe('plan', () => {
 
       const cooldown = 100
 
-      const delay = await setupDelayMod({
-        owner,
+      const delay = await deployDelayMod({
+        owner: owner.address,
         avatar: safe,
-        module: eoa.address,
         cooldown,
       })
+
+      await enableModule({ owner, module: delay, moduleToEnable: eoa.address })
+      await enableModuleInSafe({ owner, safe, module: delay })
 
       const route = createRouteEoaDelaySafe({
         eoa: eoa.address,
@@ -760,7 +684,121 @@ describe('plan', () => {
     })
   })
 
-  describe('EOA --member--> ROLES --enabled--> DELAY --enabled--> SAFE*/*', () => {})
+  describe('EOA --member--> ROLES --enabled--> DELAY --enabled--> SAFE*/*', () => {
+    it('plans execution', async () => {
+      const owner = privateKeyToAccount(randomHash())
+      const eoa = privateKeyToAccount(randomHash())
+      const receiver = privateKeyToAccount(randomHash())
+      const someone = privateKeyToAccount(randomHash())
+
+      const safe = await deploySafe({
+        owners: [owner.address],
+        threshold: 1,
+        creationNonce: BigInt(randomHash()),
+      })
+
+      await fund([
+        owner.address,
+        eoa.address,
+        [safe, parseEther('10')],
+        someone.address,
+      ])
+
+      const cooldown = 100
+      const delay = await deployDelayMod({
+        owner: owner.address,
+        avatar: safe,
+        target: safe,
+        cooldown,
+      })
+
+      const { roles, roleId } = await setupRolesMod({
+        owner,
+        avatar: safe,
+        target: delay,
+        member: eoa.address,
+        destination: receiver.address,
+      })
+
+      await enableModule({ owner, module: delay, moduleToEnable: roles })
+      await enableModuleInSafe({ owner, safe, module: delay })
+
+      const route = createRouteEoaRolesDelaySafe({
+        eoa: eoa.address as any,
+        roles,
+        roleId,
+        delay,
+        safe,
+      })
+
+      const plan = await planExecution(
+        [
+          {
+            data: '0x',
+            to: receiver.address,
+            value: String(parseEther('0.123')),
+          },
+        ],
+        route,
+        {
+          providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        }
+      )
+
+      expect(plan).toHaveLength(2)
+
+      const [execute1, execute2] = plan as [
+        ExecuteTransactionAction,
+        ExecuteTransactionAction,
+      ]
+
+      expect(execute1.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
+      expect(execute2.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
+
+      expect(execute1.transaction.to).toEqual(roles)
+      expect(execute2.transaction.to).toEqual(delay)
+
+      expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('10')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(0n)
+
+      await testClient.sendTransaction({
+        account: eoa,
+        to: execute1.transaction.to,
+        data: execute1.transaction.data as any,
+        value: BigInt(execute1.transaction.value),
+      })
+
+      await testClient.request({
+        method: 'anvil_mine' as any,
+        params: [cooldown],
+      })
+
+      expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('10')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(0n)
+
+      await testClient.sendTransaction({
+        account: someone,
+        to: execute2.transaction.to,
+        data: execute2.transaction.data as any,
+        value: BigInt(execute2.transaction.value),
+      })
+
+      expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('10') - parseEther('0.123')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(parseEther('0.123'))
+    })
+  })
 })
 
 function createRouteEoaOwnsSafe({
@@ -934,7 +972,7 @@ function createRouteEoaRolesSafe({
         account: {
           type: AccountType.EOA,
           prefixedAddress: `eoa:${eoa}`,
-          address: eoa as `0x${string}`,
+          address: eoa,
         },
       },
       {
@@ -1020,6 +1058,76 @@ function createRouteEoaDelaySafe({
     ],
     id: 'test',
     initiator: `eoa:${eoa}` as PrefixedAddress,
+    avatar: withPrefix(safe),
+  }
+}
+
+function createRouteEoaRolesDelaySafe({
+  eoa,
+  roles,
+  roleId,
+  delay,
+  safe,
+}: {
+  eoa: `0x${string}`
+  roles: Address
+  roleId: Hash
+  delay: Address
+  safe: Address
+}): Route {
+  return {
+    waypoints: [
+      {
+        account: {
+          type: AccountType.EOA,
+          prefixedAddress: `eoa:${eoa}`,
+          address: eoa as `0x${string}`,
+        },
+      },
+      {
+        account: {
+          type: AccountType.ROLES,
+          address: roles as `0x${string}`,
+          prefixedAddress: withPrefix(roles),
+          chain: testClient.chain.id,
+          multisend: [] as `0x${string}`[],
+          version: 2,
+        },
+        connection: {
+          type: ConnectionType.IS_MEMBER,
+          roles: [roleId],
+          from: `eoa:${eoa}`,
+        },
+      },
+      {
+        account: {
+          type: AccountType.DELAY,
+          address: delay as any,
+          prefixedAddress: withPrefix(delay),
+          chain: testClient.chain.id,
+        },
+        connection: {
+          type: ConnectionType.IS_ENABLED,
+          from: withPrefix(roles),
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          address: safe as `0x${string}`,
+          prefixedAddress: withPrefix(safe),
+
+          chain: testClient.chain.id,
+          threshold: 1,
+        },
+        connection: {
+          type: ConnectionType.IS_ENABLED,
+          from: withPrefix(delay),
+        },
+      },
+    ],
+    id: 'test',
+    initiator: `eoa:${eoa}`,
     avatar: withPrefix(safe),
   }
 }
