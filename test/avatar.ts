@@ -13,19 +13,14 @@ import type {
   PredictedSafeProps,
 } from '@safe-global/protocol-kit'
 import Safe from '@safe-global/protocol-kit'
-import {
-  MetaTransactionData,
-  OperationType,
-  SafeVersion,
-} from '@safe-global/types-kit'
+import { SafeVersion } from '@safe-global/types-kit'
 import {
   getCompatibilityFallbackHandlerDeployment,
   getProxyFactoryDeployment,
   getSafeSingletonDeployment,
 } from '@safe-global/safe-deployments'
 import { deployer, testClient } from './client'
-import { encodeExecTransaction } from '../src/execute/avatar'
-import { formatPrefixedAddress } from '../src'
+
 import { createPreApprovedSignature } from '../src/execute/signatures'
 
 export async function deploySafe({
@@ -56,7 +51,7 @@ export async function deploySafe({
   return address
 }
 
-export async function enableModule({
+export async function enableModuleInSafe({
   owner,
   safe,
   module,
@@ -67,26 +62,27 @@ export async function enableModule({
 }) {
   await testClient.sendTransaction({
     account: owner,
-    ...encodeExecTransaction(
-      formatPrefixedAddress(testClient.chain.id, safe),
-      {
-        to: safe,
-        data: encodeFunctionData({
+    to: safe,
+    data: encodeFunctionData({
+      abi: safeAbi,
+      functionName: 'execTransaction',
+      args: [
+        safe,
+        0n,
+        encodeFunctionData({
           abi: safeAbi,
           functionName: 'enableModule',
           args: [module],
         }),
-        value: '0',
-        safeTxGas: '0',
-        baseGas: '0',
-        gasPrice: '0',
-        refundReceiver: zeroAddress,
-        gasToken: zeroAddress,
-        operation: 0,
-        nonce: 0,
-      },
-      createPreApprovedSignature(owner.address)
-    ),
+        0,
+        0n,
+        0n,
+        0n,
+        zeroAddress,
+        zeroAddress,
+        createPreApprovedSignature(owner.address),
+      ],
+    }),
   })
 }
 
@@ -196,6 +192,7 @@ async function calculateAddress({
 }
 
 export const safeAbi = parseAbi([
+  'function approvedHashes(address, bytes32) view returns (uint256)',
   'function enableModule(address module)',
   'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures) payable returns (bool success)',
   'function setup(address[] _owners, uint256 _threshold, address to, bytes data, address fallbackHandler, address paymentToken, uint256 payment, address paymentReceiver)',
