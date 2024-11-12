@@ -13,10 +13,10 @@ export const formatPrefixedAddress = (
   }
 
   const prefix = chain ? chain.shortName : 'eoa'
-  return `${prefix}:${address.toLowerCase()}` as PrefixedAddress
+  return `${prefix}:${getAddress(address)}` as PrefixedAddress
 }
 
-export const parsePrefixedAddress = (prefixedAddress: PrefixedAddress) => {
+export const splitPrefixedAddress = (prefixedAddress: PrefixedAddress) => {
   const [prefix, address] = prefixedAddress.split(':')
   const chain =
     prefix !== 'eoa'
@@ -27,4 +27,11 @@ export const parsePrefixedAddress = (prefixedAddress: PrefixedAddress) => {
   }
   const checksummedAddress = getAddress(address) as `0x${string}`
   return [chain?.chainId, checksummedAddress] as const
+}
+
+export const parsePrefixedAddress = (
+  prefixedAddress: PrefixedAddress | Address
+) => {
+  const [, address] = prefixedAddress.split(':')
+  return getAddress(address) as `0x${string}`
 }

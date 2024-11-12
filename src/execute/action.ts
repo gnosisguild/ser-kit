@@ -26,7 +26,7 @@ export function unwrapExecuteTransaction(
 
 export const encodeSafeTransaction = (action: SafeTransactionAction) => {
   return {
-    to: parsePrefixedAddress(action.safe)[1],
+    to: parsePrefixedAddress(action.safe),
     data: encodeFunctionData({
       abi: safeAbi,
       functionName: 'execTransaction',

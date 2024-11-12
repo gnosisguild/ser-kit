@@ -1,8 +1,10 @@
 import {
+  Account,
   createTestClient,
   hashMessage,
   http,
   parseEther,
+  PrivateKeyAccount,
   publicActions,
   walletActions,
 } from 'viem'
@@ -14,6 +16,16 @@ export const anvilUrl = `http://127.0.0.1:${process.env.ANVIL_PORT}/`
 export const deployer = privateKeyToAccount(
   '0x0000000000000000000000000000000000000000000000000000000000badfed'
 )
+
+export const testClientWithAccount = (account: PrivateKeyAccount) =>
+  createTestClient({
+    account,
+    chain: mainnet,
+    mode: 'anvil',
+    transport: http(anvilUrl),
+  })
+    .extend(publicActions)
+    .extend(walletActions)
 
 export const testClient = createTestClient({
   chain: mainnet,

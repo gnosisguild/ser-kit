@@ -6,7 +6,7 @@ import type { MetaTransactionData } from '@safe-global/types-kit'
 import { execute } from './execute'
 import { testClient } from '../../test/client'
 import { planExecution } from './plan'
-import { parsePrefixedAddress } from '../addresses'
+import { splitPrefixedAddress } from '../addresses'
 import { testEao, testRoutes } from '../../test/routes'
 
 const proposeTransactionMock = mock(async () => {})
@@ -35,7 +35,7 @@ describe('plan & execute', () => {
       { providers: { 1: testClient as Eip1193Provider } }
     )
     // impersonate route initiator EOA
-    const [_chain, eoaAddress] = parsePrefixedAddress(
+    const [_chain, eoaAddress] = splitPrefixedAddress(
       testRoutes.eoaOwnsSafe.initiator
     )
 

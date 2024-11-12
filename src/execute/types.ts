@@ -1,4 +1,4 @@
-import type { TypedDataDomain } from 'viem'
+import type { Address, TypedDataDomain } from 'viem'
 import type {
   MetaTransactionData,
   SafeTransactionData,
@@ -26,8 +26,10 @@ export interface ExecuteTransactionAction {
 /** Represents a signature to be produced for the given message by the specified account */
 export interface SignMessageAction {
   type: ExecutionActionType.SIGN_MESSAGE
-  message: string
+  chain: ChainId
   from: PrefixedAddress
+
+  message: string
 }
 
 interface TypedDataField {
@@ -45,8 +47,10 @@ export interface EIP712TypedData {
 /** Represents a signature to be produced for the given typed data object by the specified account */
 export interface SignTypedDataAction {
   type: ExecutionActionType.SIGN_TYPED_DATA
-  data: EIP712TypedData
+  chain: ChainId
   from: PrefixedAddress
+
+  data: EIP712TypedData
 }
 
 /** Represents an action for the given Safe transaction to be proposed for execution to the Safe Transaction Service */
@@ -54,6 +58,8 @@ export interface ProposeTransactionAction {
   type: ExecutionActionType.PROPOSE_TRANSACTION
   safe: PrefixedAddress
   safeTransaction: SafeTransactionData
+
+  proposer: Address
   /** If set to null, the previous action's output will be inserted as signature */
   signature: `0x${string}` | null
 }

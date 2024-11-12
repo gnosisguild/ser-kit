@@ -37,7 +37,7 @@ import {
 } from './avatar'
 import { encodeExecTransactionWithRoleData } from './roles'
 import { encodeExecuteNextTxData } from './delay'
-import { formatPrefixedAddress, parsePrefixedAddress } from '../addresses'
+import { formatPrefixedAddress, splitPrefixedAddress } from '../addresses'
 import { typedDataForSafeTransaction } from '../eip712'
 
 import {
@@ -82,7 +82,7 @@ export const planExecution = async (
     options?.multiSend ? [options.multiSend] : lastRolesAccount?.multisend
   )
 
-  const [chainId] = parsePrefixedAddress(route.avatar)
+  const [chainId] = splitPrefixedAddress(route.avatar)
   if (!chainId) {
     throw new Error(
       `Invalid prefixed address for route avatar: ${route.avatar}`
@@ -139,8 +139,9 @@ const planAsEOA = async (
     return [
       {
         type: ExecutionActionType.SIGN_TYPED_DATA,
-        data: typedData,
+        chain: splitPrefixedAddress(waypoint.account.prefixedAddress)[0]!,
         from: waypoint.account.prefixedAddress,
+        data: typedData,
       },
       request,
     ]
@@ -227,7 +228,11 @@ const planAsSafe = async (
           transaction,
           options,
         }),
-        signature: null, // to be filled upstream
+
+        // to be filled upstream
+        proposer: `eoa:${zeroAddress}`,
+        // to be filled upstream
+        signature: null,
       },
       ...result,
     ]
