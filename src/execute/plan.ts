@@ -26,8 +26,6 @@ import {
   type Waypoint,
 } from '../types'
 
-import { type CustomProviders } from './safe'
-
 import { createPreApprovedSignature } from './signatures'
 import { unwrapExecuteTransaction } from './action'
 import {
@@ -55,7 +53,9 @@ interface Options {
   safeTransactionProperties?: {
     [safe: PrefixedAddress]: SafeTransactionProperties
   }
-  providers?: CustomProviders
+  providers?: {
+    [chainId in ChainId]?: string | Eip1193Provider
+  }
   /** Allows customizing the multi-send contract address */
   multiSend?: `0x${string}`
 }
