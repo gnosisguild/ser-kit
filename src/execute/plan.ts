@@ -93,9 +93,9 @@ export const planExecution = async (
   let result: ExecutionAction[] = [
     {
       type: ExecutionActionType.EXECUTE_TRANSACTION,
-      transaction,
       chain: chainId,
       from: route.avatar,
+      transaction,
     },
   ]
 
@@ -172,20 +172,18 @@ const planAsSafe = async (
   )
 
   /*
-   * We divide plan as safe in two: IN and OUT
+   * We divide plan into two sections: IN and OUT.
    *
    * IN: -----
-   * we determine whether we are generating an approval, for a downstream
-   * transaction in a safe where we are currently owners. If so, we generate
-   * an extra approval transaction. This requires that we determine downstream's EIP-712
-   * hash, call approveHash with it
+   * We check if we are generating an approval for a downstream transaction
+   * in a safe where we currently hold ownership. If so, we create an
+   * additional approval transaction. This involves determining the
+   * downstream's EIP-712 hash and calling approveHash with it.
    *
-   *
-   * OUT:-----
-   * On out we do wrapping. If upstream there's an owner, we're wrapping current execution
-   * into a relay.
-   *
-   * Otherwise, wrap it into an execution
+   * OUT: -----
+   * For OUT, we handle wrapping. If there is an owner upstream, we wrap
+   * the current execution into a relay. If not, we wrap it into a standard
+   * execution.
    */
 
   // IN
@@ -194,7 +192,6 @@ const planAsSafe = async (
     transaction = request.transaction
     result = [] as ExecutionAction[]
   } else {
-    // create the extra approval action and insert pre approved sig
     assert(right && right.account.type == AccountType.SAFE)
     const typedData = typedDataForSafeTransaction({
       chainId: right.account.chain,
