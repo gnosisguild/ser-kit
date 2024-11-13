@@ -5,7 +5,11 @@ import { privateKeyToAccount } from 'viem/accounts'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 import { OperationType } from '@safe-global/types-kit'
 
-import { formatPrefixedAddress, splitPrefixedAddress } from '../addresses'
+import {
+  formatPrefixedAddress,
+  parsePrefixedAddress,
+  splitPrefixedAddress,
+} from '../addresses'
 
 import {
   deployer,
@@ -108,12 +112,7 @@ describe('plan', () => {
         threshold: 1,
       })
 
-      // fund the safe
-      await testClient.sendTransaction({
-        account: deployer,
-        to: safe,
-        value: parseEther('2'),
-      })
+      await fund([[safe, parseEther('2')]])
 
       const chainId = testClient.chain.id
 
@@ -552,7 +551,74 @@ describe('plan', () => {
   })
 
   describe('EOA --member--> ROLES --enabled--> SAFE*/*', () => {
-    it.todo('plans execution')
+    it('plans execution', async () => {
+      const owner = privateKeyToAccount(randomHash())
+      const member = privateKeyToAccount(randomHash())
+      const receiver = privateKeyToAccount(randomHash())
+
+      const safe = await deploySafe({
+        owners: [owner.address],
+        threshold: 1,
+        creationNonce: BigInt(randomHash()),
+      })
+
+      await fund([owner.address, member.address, safe])
+
+      const { roles, roleId } = await setupRolesMod({
+        owner: owner,
+        avatar: safe,
+        member: member.address,
+        destination: receiver.address,
+      })
+
+      await enableModuleInSafe({ safe, owner, module: roles })
+
+      const route = createRouteEoaRolesSafe({
+        eoa: member.address as any,
+        roles,
+        roleId,
+        safe,
+      })
+
+      const plan = await planExecution(
+        [
+          {
+            data: '0x',
+            to: receiver.address,
+            value: String(parseEther('0.123')),
+          },
+        ],
+        route,
+        {
+          providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        }
+      )
+
+      expect(plan).toHaveLength(1)
+
+      expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('1')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(0n)
+
+      await execute(plan, [], testClient as Eip1193Provider, {
+        getWalletClient: (({ account }: any) => {
+          if (parsePrefixedAddress(account) == getAddress(member.address)) {
+            return testClientWithAccount(member)
+          }
+          return testClientWithAccount(deployer)
+        }) as any,
+      })
+
+      await expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('0.877')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(parseEther('0.123'))
+    })
 
     it('plans execution independently', async () => {
       const owner = privateKeyToAccount(randomHash())
@@ -625,7 +691,104 @@ describe('plan', () => {
   })
 
   describe('EOA --enabled--> DELAY --enabled--> SAFE*/*', () => {
-    it.todo('plans execution')
+    it('plans execution', async () => {
+      const owner = privateKeyToAccount(randomHash())
+      const eoa = privateKeyToAccount(randomHash())
+      const receiver = privateKeyToAccount(randomHash())
+      const someone = privateKeyToAccount(randomHash())
+
+      const safe = await deploySafe({
+        owners: [owner.address],
+        threshold: 1,
+        creationNonce: BigInt(randomHash()),
+      })
+
+      expect(null)
+
+      await fund([
+        owner.address,
+        eoa.address,
+        [safe, parseEther('10')],
+        someone.address,
+      ])
+
+      const cooldown = 100
+
+      const delay = await deployDelayMod({
+        owner: owner.address,
+        avatar: safe,
+        cooldown,
+      })
+
+      await enableModule({ owner, module: delay, moduleToEnable: eoa.address })
+      await enableModuleInSafe({ owner, safe, module: delay })
+
+      const route = createRouteEoaDelaySafe({
+        eoa: eoa.address,
+        delay,
+        safe,
+      })
+
+      const plan = await planExecution(
+        [
+          {
+            data: '0x',
+            to: receiver.address,
+            value: String(parseEther('0.123')),
+          },
+        ],
+        route,
+        {
+          providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        }
+      )
+
+      expect(plan).toHaveLength(2)
+
+      expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('10')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(0n)
+
+      let state: any[] = []
+      try {
+        // TODO set up tooling to assert on revert happening when contract invoking
+        await execute(plan, state, testClient as Eip1193Provider, {
+          getWalletClient: (({ account }: any) => {
+            if (parsePrefixedAddress(account) == getAddress(eoa.address)) {
+              return testClientWithAccount(eoa)
+            }
+            return testClientWithAccount(someone)
+          }) as any,
+        })
+      } catch (e) {}
+      expect(state).toHaveLength(1)
+
+      expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('10')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(0n)
+
+      await testClient.request({
+        method: 'anvil_mine' as any,
+        params: [cooldown],
+      })
+
+      await execute(plan, state, testClient as Eip1193Provider, {
+        getWalletClient: (() => testClientWithAccount(someone)) as any,
+      })
+
+      expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('10') - parseEther('0.123')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(parseEther('0.123'))
+    })
 
     it('plans execution independently', async () => {
       const owner = privateKeyToAccount(randomHash())
@@ -729,7 +892,138 @@ describe('plan', () => {
   })
 
   describe('EOA --member--> ROLES --enabled--> SAFE*/* --owns--> SAFE1/1', () => {
-    it.todo('plans execution')
+    it('plans execution', async () => {
+      const owner = privateKeyToAccount(randomHash())
+      const member = privateKeyToAccount(randomHash())
+      const receiver = privateKeyToAccount(randomHash())
+      const someone = privateKeyToAccount(randomHash())
+
+      await fund([owner.address, member.address, someone.address])
+
+      const safe1 = await deploySafe({
+        owners: [owner.address],
+        threshold: 1,
+        creationNonce: BigInt(randomHash()),
+      })
+
+      const safe2 = await deploySafe({
+        owners: [safe1],
+        threshold: 1,
+        creationNonce: BigInt(randomHash()),
+      })
+
+      await fund([safe1, safe2])
+
+      const { roles, roleId } = await setupRolesMod({
+        owner: owner,
+        avatar: safe1,
+        member: member.address,
+        destination: safe2,
+      })
+
+      await enableModuleInSafe({
+        owner,
+        safe: safe1,
+        module: roles,
+      })
+
+      const route = {
+        waypoints: [
+          {
+            account: {
+              type: AccountType.EOA,
+              prefixedAddress: `eoa:${member.address}` as PrefixedAddress,
+              address: member.address as `0x${string}`,
+            },
+          },
+          {
+            account: {
+              type: AccountType.ROLES,
+              address: roles as `0x${string}`,
+              prefixedAddress: withPrefix(roles),
+              chain: testClient.chain.id,
+              multisend: [] as `0x${string}`[],
+              version: 2,
+            },
+            connection: {
+              type: ConnectionType.IS_MEMBER,
+              roles: [roleId],
+              from: `eoa:${member.address}`,
+            },
+          },
+          {
+            account: {
+              type: AccountType.SAFE,
+              prefixedAddress: withPrefix(safe1),
+              address: safe1,
+              chain: testClient.chain.id,
+              threshold: 1,
+            },
+            connection: {
+              type: ConnectionType.IS_ENABLED,
+              from: withPrefix(roles),
+            },
+          },
+          {
+            account: {
+              type: AccountType.SAFE,
+              prefixedAddress: withPrefix(safe2),
+              address: safe2,
+              chain: testClient.chain.id,
+              threshold: 1,
+            },
+            connection: {
+              type: ConnectionType.OWNS,
+              from: withPrefix(safe1),
+            },
+          },
+        ],
+        id: 'test',
+        initiator: `eoa:${member.address}` as PrefixedAddress,
+        avatar: withPrefix(safe2),
+      } as Route
+
+      const plan = await planExecution(
+        [
+          {
+            data: '0x',
+            to: receiver.address,
+            value: String(parseEther('0.123')),
+          },
+        ],
+        route,
+        {
+          providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        }
+      )
+
+      expect(await testClient.getBalance({ address: safe2 })).toEqual(
+        parseEther('1')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(0n)
+
+      expect(plan).toHaveLength(2)
+
+      const state: any[] = []
+      await execute(plan, state, testClient as Eip1193Provider, {
+        getWalletClient: (({ account }: any) => {
+          if (parsePrefixedAddress(account) == getAddress(member.address)) {
+            return testClientWithAccount(member)
+          }
+          return testClientWithAccount(someone)
+        }) as any,
+      })
+      expect(state).toHaveLength(2)
+
+      expect(await testClient.getBalance({ address: safe2 })).toEqual(
+        parseEther('1') - parseEther('0.123')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(parseEther('0.123'))
+    })
 
     it('plans execution independently', async () => {
       const owner = privateKeyToAccount(hashMessage('1'))
@@ -875,7 +1169,107 @@ describe('plan', () => {
   })
 
   describe('EOA --member--> ROLES --enabled--> DELAY --enabled--> SAFE*/*', () => {
-    it.todo('plans execution')
+    it('plans execution', async () => {
+      const owner = privateKeyToAccount(randomHash())
+      const eoa = privateKeyToAccount(randomHash())
+      const receiver = privateKeyToAccount(randomHash())
+      const someone = privateKeyToAccount(randomHash())
+
+      const safe = await deploySafe({
+        owners: [owner.address],
+        threshold: 1,
+        creationNonce: BigInt(randomHash()),
+      })
+
+      await fund([
+        owner.address,
+        eoa.address,
+        [safe, parseEther('10')],
+        someone.address,
+      ])
+
+      const cooldown = 100
+      const delay = await deployDelayMod({
+        owner: owner.address,
+        avatar: safe,
+        target: safe,
+        cooldown,
+      })
+
+      const { roles, roleId } = await setupRolesMod({
+        owner,
+        avatar: safe,
+        target: delay,
+        member: eoa.address,
+        destination: receiver.address,
+      })
+
+      await enableModule({ owner, module: delay, moduleToEnable: roles })
+      await enableModuleInSafe({ owner, safe, module: delay })
+
+      const route = createRouteEoaRolesDelaySafe({
+        eoa: eoa.address as any,
+        roles,
+        roleId,
+        delay,
+        safe,
+      })
+
+      const plan = await planExecution(
+        [
+          {
+            data: '0x',
+            to: receiver.address,
+            value: String(parseEther('0.123')),
+          },
+        ],
+        route,
+        {
+          providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        }
+      )
+
+      expect(plan).toHaveLength(2)
+
+      expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('10')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(0n)
+
+      const state: any[] = []
+      try {
+        // TODO we need execution to support cooldown delay
+        await execute(plan, state, testClient as Eip1193Provider, {
+          getWalletClient: (() => testClientWithAccount(eoa)) as any,
+        })
+      } catch (e) {}
+      expect(state).toHaveLength(1)
+
+      await testClient.request({
+        method: 'anvil_mine' as any,
+        params: [cooldown],
+      })
+
+      expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('10')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(0n)
+
+      await execute(plan, state, testClient as Eip1193Provider, {
+        getWalletClient: (() => testClientWithAccount(someone)) as any,
+      })
+
+      expect(await testClient.getBalance({ address: safe })).toEqual(
+        parseEther('10') - parseEther('0.123')
+      )
+      expect(
+        await testClient.getBalance({ address: receiver.address })
+      ).toEqual(parseEther('0.123'))
+    })
 
     it('plans execution independently', async () => {
       const owner = privateKeyToAccount(randomHash())
