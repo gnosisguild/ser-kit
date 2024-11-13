@@ -1,9 +1,12 @@
+import { Address, Hash } from 'viem'
 import {
   AccountType,
   ConnectionType,
   calculateRouteId,
+  formatPrefixedAddress,
   type Route,
 } from '../src'
+import { testClient } from './client'
 
 /**
  * These routes exist in the mainnet snapshot and can be used for actually executing transactions.
@@ -131,3 +134,345 @@ export const testRoutes = {
     avatar: 'eth:0x849d52316331967b6ff1198e5e32a0eb168d039d',
   },
 } satisfies { [name: string]: Route }
+
+const withPrefix = (address: Address) =>
+  formatPrefixedAddress(testClient.chain.id, address)
+
+export function eoaSafe({
+  eoa,
+  safe,
+  threshold = 1,
+}: {
+  eoa: Address
+  safe: Address
+  threshold?: number
+}) {
+  const route = {
+    waypoints: [
+      {
+        account: {
+          type: AccountType.EOA,
+          prefixedAddress: `eoa:${eoa}`,
+          address: eoa,
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          prefixedAddress: withPrefix(safe),
+          address: safe,
+          chain: testClient.chain.id,
+          threshold,
+        },
+        connection: {
+          type: ConnectionType.OWNS,
+          from: `eoa:${eoa}`,
+        },
+      },
+    ],
+    id: 'test',
+    initiator: `eoa:${eoa}`,
+    avatar: withPrefix(safe),
+  } as Route
+
+  return route
+}
+
+export function eoaRolesSafe({
+  eoa,
+  roles,
+  roleId,
+  safe,
+}: {
+  eoa: `0x${string}`
+  roles: Address
+  roleId: Hash
+  safe: Address
+}): Route {
+  return {
+    waypoints: [
+      {
+        account: {
+          type: AccountType.EOA,
+          prefixedAddress: `eoa:${eoa}`,
+          address: eoa,
+        },
+      },
+      {
+        account: {
+          type: AccountType.ROLES,
+          address: roles as `0x${string}`,
+          prefixedAddress: withPrefix(roles),
+          chain: testClient.chain.id,
+          multisend: [] as `0x${string}`[],
+          version: 2,
+        },
+        connection: {
+          type: ConnectionType.IS_MEMBER,
+          roles: [roleId],
+          from: `eoa:${eoa}`,
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          address: safe as `0x${string}`,
+          prefixedAddress: withPrefix(safe),
+
+          chain: testClient.chain.id,
+          threshold: 1,
+        },
+        connection: {
+          type: ConnectionType.IS_ENABLED,
+          from: withPrefix(roles),
+        },
+      },
+    ],
+    id: 'test',
+    initiator: `eoa:${eoa}`,
+    avatar: withPrefix(safe),
+  }
+}
+
+export function eoaDelaySafe({
+  eoa,
+  delay,
+  safe,
+}: {
+  eoa: Address
+  delay: Address
+  safe: Address
+}): Route {
+  return {
+    waypoints: [
+      {
+        account: {
+          type: AccountType.EOA,
+          prefixedAddress: `eoa:${eoa}` as PrefixedAddress,
+          address: eoa as `0x${string}`,
+        },
+      },
+      {
+        account: {
+          type: AccountType.DELAY,
+          address: delay as any,
+          prefixedAddress: withPrefix(delay),
+          chain: testClient.chain.id,
+        },
+        connection: {
+          type: ConnectionType.IS_ENABLED,
+          from: `eoa:${eoa}` as PrefixedAddress,
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          address: safe as `0x${string}`,
+          prefixedAddress: withPrefix(safe),
+
+          chain: testClient.chain.id,
+          threshold: 1,
+        },
+        connection: {
+          type: ConnectionType.IS_ENABLED,
+          from: withPrefix(delay),
+        },
+      },
+    ],
+    id: 'test',
+    initiator: `eoa:${eoa}` as PrefixedAddress,
+    avatar: withPrefix(safe),
+  }
+}
+
+export function eoaRolesDelaySafe({
+  eoa,
+  roles,
+  roleId,
+  delay,
+  safe,
+}: {
+  eoa: `0x${string}`
+  roles: Address
+  roleId: Hash
+  delay: Address
+  safe: Address
+}): Route {
+  return {
+    waypoints: [
+      {
+        account: {
+          type: AccountType.EOA,
+          prefixedAddress: `eoa:${eoa}`,
+          address: eoa as `0x${string}`,
+        },
+      },
+      {
+        account: {
+          type: AccountType.ROLES,
+          address: roles as `0x${string}`,
+          prefixedAddress: withPrefix(roles),
+          chain: testClient.chain.id,
+          multisend: [] as `0x${string}`[],
+          version: 2,
+        },
+        connection: {
+          type: ConnectionType.IS_MEMBER,
+          roles: [roleId],
+          from: `eoa:${eoa}`,
+        },
+      },
+      {
+        account: {
+          type: AccountType.DELAY,
+          address: delay as any,
+          prefixedAddress: withPrefix(delay),
+          chain: testClient.chain.id,
+        },
+        connection: {
+          type: ConnectionType.IS_ENABLED,
+          from: withPrefix(roles),
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          address: safe as `0x${string}`,
+          prefixedAddress: withPrefix(safe),
+
+          chain: testClient.chain.id,
+          threshold: 1,
+        },
+        connection: {
+          type: ConnectionType.IS_ENABLED,
+          from: withPrefix(delay),
+        },
+      },
+    ],
+    id: 'test',
+    initiator: `eoa:${eoa}`,
+    avatar: withPrefix(safe),
+  }
+}
+
+export function eoaSafeOwnsSafe({
+  eoa,
+  s1,
+  s1Threshold = 1,
+  s2,
+  s2Threshold = 1,
+}: {
+  eoa: Address
+  s1: Address
+  s1Threshold?: number
+  s2: Address
+  s2Threshold?: number
+}): Route {
+  const route = {
+    waypoints: [
+      {
+        account: {
+          type: AccountType.EOA,
+          prefixedAddress: `eoa:${eoa}`,
+          address: eoa,
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          prefixedAddress: withPrefix(s1),
+          address: s1,
+          chain: testClient.chain.id,
+          threshold: s1Threshold,
+        },
+        connection: {
+          type: ConnectionType.OWNS,
+          from: `eoa:${eoa}`,
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          prefixedAddress: withPrefix(s2),
+          address: s2,
+          chain: testClient.chain.id,
+          threshold: s2Threshold,
+        },
+        connection: {
+          type: ConnectionType.OWNS,
+          from: withPrefix(s1),
+        },
+      },
+    ],
+    id: 'test',
+    initiator: `eoa:${eoa}`,
+    avatar: withPrefix(s2),
+  } as Route
+
+  return route
+}
+
+export function eoaSafeMemberOfSafe({
+  eoa,
+  s1,
+  s1Threshold = 1,
+  s2,
+  s2Threshold = 1,
+}: {
+  eoa: Address
+  s1: Address
+  s1Threshold?: number
+  s2: Address
+  s2Threshold?: number
+}): Route {
+  const route = {
+    waypoints: [
+      {
+        account: {
+          type: AccountType.EOA,
+          prefixedAddress: `eoa:${eoa}`,
+          address: eoa,
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          prefixedAddress: withPrefix(s1),
+          address: s1,
+          chain: testClient.chain.id,
+          threshold: s1Threshold,
+        },
+        connection: {
+          type: ConnectionType.OWNS,
+          from: `eoa:${eoa}`,
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          prefixedAddress: withPrefix(s2),
+          address: s2,
+          chain: testClient.chain.id,
+          threshold: s2Threshold,
+        },
+        connection: {
+          type: ConnectionType.IS_ENABLED,
+          from: withPrefix(s1),
+        },
+      },
+    ],
+    id: 'test',
+    initiator: `eoa:${eoa}`,
+    avatar: withPrefix(s2),
+  } as Route
+
+  return route
+}
+
+// const metaTransactions = {
+//   wrapEth: {
+//     to: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+//     value: BigInt(1e18).toString(),
+//     data: '0xd0e30db0', // deposit()
+//   },
+// } satisfies { [name: string]: MetaTransactionData }

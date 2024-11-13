@@ -1,24 +1,17 @@
 import { describe, it, expect } from 'bun:test'
-import { Address, getAddress, Hash, hashMessage, parseEther } from 'viem'
+import { Address, getAddress, hashMessage, parseEther } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 import { OperationType } from '@safe-global/types-kit'
 
+import { encodeSafeTransaction } from './action'
 import {
   formatPrefixedAddress,
   parsePrefixedAddress,
   splitPrefixedAddress,
 } from '../addresses'
 
-import {
-  deployer,
-  fund,
-  randomHash,
-  testClient,
-  testClientWithAccount,
-} from '../../test/client'
-import { deploySafe, enableModuleInSafe } from '../../test/avatar'
 import { AccountType, ConnectionType, PrefixedAddress, Route } from '../types'
 import {
   ExecuteTransactionAction,
@@ -29,7 +22,23 @@ import {
 
 import { setupRolesMod } from '../../test/roles'
 import { deployDelayMod, enableModule } from '../../test/delay'
-import { encodeSafeTransaction } from './action'
+
+import {
+  deployer,
+  fund,
+  randomHash,
+  testClient,
+  testClientWithAccount,
+} from '../../test/client'
+import { deploySafe, enableModuleInSafe } from '../../test/avatar'
+import {
+  eoaDelaySafe,
+  eoaRolesDelaySafe,
+  eoaRolesSafe,
+  eoaSafe,
+  eoaSafeMemberOfSafe,
+  eoaSafeOwnsSafe,
+} from '../../test/routes'
 
 import { planExecution } from './plan'
 import { execute } from './execute'
@@ -49,7 +58,7 @@ describe('plan', () => {
         threshold: 1,
       })
 
-      const route = createRouteEoaOwnsSafe({
+      const route = eoaSafe({
         eoa: signer.address,
         safe,
         threshold: 1,
@@ -106,7 +115,7 @@ describe('plan', () => {
         threshold: 1,
       })
 
-      const route = createRouteEoaOwnsSafe({
+      const route = eoaSafe({
         eoa: signer.address,
         safe,
         threshold: 1,
@@ -172,7 +181,7 @@ describe('plan', () => {
         threshold: 1,
       })
 
-      const route = createRouteEoaOwnsSafe({
+      const route = eoaSafe({
         eoa: signer.address,
         safe,
         threshold: 1,
@@ -211,7 +220,7 @@ describe('plan', () => {
         threshold: 2,
       })
 
-      const route = createRouteEoaOwnsSafe({
+      const route = eoaSafe({
         eoa: signer1.address,
         safe,
         threshold: 2,
@@ -253,7 +262,7 @@ describe('plan', () => {
         creationNonce: BigInt(randomHash()),
       })
 
-      const route = createRouteEoaOwnsSafeOwnsSafe({
+      const route = eoaSafeOwnsSafe({
         eoa: eoa.address,
         s1: safe1,
         s2: safe2,
@@ -307,7 +316,7 @@ describe('plan', () => {
         creationNonce: BigInt(randomHash()),
       })
 
-      const route = createRouteEoaOwnsSafeOwnsSafe({
+      const route = eoaSafeOwnsSafe({
         eoa: eoa.address,
         s1: safe1,
         s2: safe2,
@@ -413,7 +422,7 @@ describe('plan', () => {
         module: safe1,
       })
 
-      const route = createRouteEoaOwnsSafeMemberOfSafe({
+      const route = eoaSafeMemberOfSafe({
         eoa: eoa.address,
         s1: safe1,
         s2: safe2,
@@ -489,7 +498,7 @@ describe('plan', () => {
         module: safe1,
       })
 
-      const route = createRouteEoaOwnsSafeMemberOfSafe({
+      const route = eoaSafeMemberOfSafe({
         eoa: eoa.address,
         s1: safe1,
         s2: safe2,
@@ -573,7 +582,7 @@ describe('plan', () => {
 
       await enableModuleInSafe({ safe, owner, module: roles })
 
-      const route = createRouteEoaRolesSafe({
+      const route = eoaRolesSafe({
         eoa: member.address as any,
         roles,
         roleId,
@@ -642,7 +651,7 @@ describe('plan', () => {
 
       await enableModuleInSafe({ safe, owner, module: roles })
 
-      const route = createRouteEoaRolesSafe({
+      const route = eoaRolesSafe({
         eoa: member.address as any,
         roles,
         roleId,
@@ -723,7 +732,7 @@ describe('plan', () => {
       await enableModule({ owner, module: delay, moduleToEnable: eoa.address })
       await enableModuleInSafe({ owner, safe, module: delay })
 
-      const route = createRouteEoaDelaySafe({
+      const route = eoaDelaySafe({
         eoa: eoa.address,
         delay,
         safe,
@@ -820,7 +829,7 @@ describe('plan', () => {
       await enableModule({ owner, module: delay, moduleToEnable: eoa.address })
       await enableModuleInSafe({ owner, safe, module: delay })
 
-      const route = createRouteEoaDelaySafe({
+      const route = eoaDelaySafe({
         eoa: eoa.address,
         delay,
         safe,
@@ -1207,7 +1216,7 @@ describe('plan', () => {
       await enableModule({ owner, module: delay, moduleToEnable: roles })
       await enableModuleInSafe({ owner, safe, module: delay })
 
-      const route = createRouteEoaRolesDelaySafe({
+      const route = eoaRolesDelaySafe({
         eoa: eoa.address as any,
         roles,
         roleId,
@@ -1309,7 +1318,7 @@ describe('plan', () => {
       await enableModule({ owner, module: delay, moduleToEnable: roles })
       await enableModuleInSafe({ owner, safe, module: delay })
 
-      const route = createRouteEoaRolesDelaySafe({
+      const route = eoaRolesDelaySafe({
         eoa: eoa.address as any,
         roles,
         roleId,
@@ -1386,334 +1395,3 @@ describe('plan', () => {
     })
   })
 })
-
-function createRouteEoaOwnsSafe({
-  eoa,
-  safe,
-  threshold = 1,
-}: {
-  eoa: Address
-  safe: Address
-  threshold?: number
-}) {
-  const route = {
-    waypoints: [
-      {
-        account: {
-          type: AccountType.EOA,
-          prefixedAddress: `eoa:${eoa}`,
-          address: eoa,
-        },
-      },
-      {
-        account: {
-          type: AccountType.SAFE,
-          prefixedAddress: withPrefix(safe),
-          address: safe,
-          chain: testClient.chain.id,
-          threshold,
-        },
-        connection: {
-          type: ConnectionType.OWNS,
-          from: `eoa:${eoa}`,
-        },
-      },
-    ],
-    id: 'test',
-    initiator: `eoa:${eoa}`,
-    avatar: withPrefix(safe),
-  } as Route
-
-  return route
-}
-
-function createRouteEoaOwnsSafeOwnsSafe({
-  eoa,
-  s1,
-  s1Threshold = 1,
-  s2,
-  s2Threshold = 1,
-}: {
-  eoa: Address
-  s1: Address
-  s1Threshold?: number
-  s2: Address
-  s2Threshold?: number
-}): Route {
-  const route = {
-    waypoints: [
-      {
-        account: {
-          type: AccountType.EOA,
-          prefixedAddress: `eoa:${eoa}`,
-          address: eoa,
-        },
-      },
-      {
-        account: {
-          type: AccountType.SAFE,
-          prefixedAddress: withPrefix(s1),
-          address: s1,
-          chain: testClient.chain.id,
-          threshold: s1Threshold,
-        },
-        connection: {
-          type: ConnectionType.OWNS,
-          from: `eoa:${eoa}`,
-        },
-      },
-      {
-        account: {
-          type: AccountType.SAFE,
-          prefixedAddress: withPrefix(s2),
-          address: s2,
-          chain: testClient.chain.id,
-          threshold: s2Threshold,
-        },
-        connection: {
-          type: ConnectionType.OWNS,
-          from: withPrefix(s1),
-        },
-      },
-    ],
-    id: 'test',
-    initiator: `eoa:${eoa}`,
-    avatar: withPrefix(s2),
-  } as Route
-
-  return route
-}
-
-function createRouteEoaOwnsSafeMemberOfSafe({
-  eoa,
-  s1,
-  s1Threshold = 1,
-  s2,
-  s2Threshold = 1,
-}: {
-  eoa: Address
-  s1: Address
-  s1Threshold?: number
-  s2: Address
-  s2Threshold?: number
-}): Route {
-  const route = {
-    waypoints: [
-      {
-        account: {
-          type: AccountType.EOA,
-          prefixedAddress: `eoa:${eoa}`,
-          address: eoa,
-        },
-      },
-      {
-        account: {
-          type: AccountType.SAFE,
-          prefixedAddress: withPrefix(s1),
-          address: s1,
-          chain: testClient.chain.id,
-          threshold: s1Threshold,
-        },
-        connection: {
-          type: ConnectionType.OWNS,
-          from: `eoa:${eoa}`,
-        },
-      },
-      {
-        account: {
-          type: AccountType.SAFE,
-          prefixedAddress: withPrefix(s2),
-          address: s2,
-          chain: testClient.chain.id,
-          threshold: s2Threshold,
-        },
-        connection: {
-          type: ConnectionType.IS_ENABLED,
-          from: withPrefix(s1),
-        },
-      },
-    ],
-    id: 'test',
-    initiator: `eoa:${eoa}`,
-    avatar: withPrefix(s2),
-  } as Route
-
-  return route
-}
-
-function createRouteEoaRolesSafe({
-  eoa,
-  roles,
-  roleId,
-  safe,
-}: {
-  eoa: `0x${string}`
-  roles: Address
-  roleId: Hash
-  safe: Address
-}): Route {
-  return {
-    waypoints: [
-      {
-        account: {
-          type: AccountType.EOA,
-          prefixedAddress: `eoa:${eoa}`,
-          address: eoa,
-        },
-      },
-      {
-        account: {
-          type: AccountType.ROLES,
-          address: roles as `0x${string}`,
-          prefixedAddress: withPrefix(roles),
-          chain: testClient.chain.id,
-          multisend: [] as `0x${string}`[],
-          version: 2,
-        },
-        connection: {
-          type: ConnectionType.IS_MEMBER,
-          roles: [roleId],
-          from: `eoa:${eoa}`,
-        },
-      },
-      {
-        account: {
-          type: AccountType.SAFE,
-          address: safe as `0x${string}`,
-          prefixedAddress: withPrefix(safe),
-
-          chain: testClient.chain.id,
-          threshold: 1,
-        },
-        connection: {
-          type: ConnectionType.IS_ENABLED,
-          from: withPrefix(roles),
-        },
-      },
-    ],
-    id: 'test',
-    initiator: `eoa:${eoa}`,
-    avatar: withPrefix(safe),
-  }
-}
-
-function createRouteEoaDelaySafe({
-  eoa,
-  delay,
-  safe,
-}: {
-  eoa: Address
-  delay: Address
-  safe: Address
-}): Route {
-  return {
-    waypoints: [
-      {
-        account: {
-          type: AccountType.EOA,
-          prefixedAddress: `eoa:${eoa}` as PrefixedAddress,
-          address: eoa as `0x${string}`,
-        },
-      },
-      {
-        account: {
-          type: AccountType.DELAY,
-          address: delay as any,
-          prefixedAddress: withPrefix(delay),
-          chain: testClient.chain.id,
-        },
-        connection: {
-          type: ConnectionType.IS_ENABLED,
-          from: `eoa:${eoa}` as PrefixedAddress,
-        },
-      },
-      {
-        account: {
-          type: AccountType.SAFE,
-          address: safe as `0x${string}`,
-          prefixedAddress: withPrefix(safe),
-
-          chain: testClient.chain.id,
-          threshold: 1,
-        },
-        connection: {
-          type: ConnectionType.IS_ENABLED,
-          from: withPrefix(delay),
-        },
-      },
-    ],
-    id: 'test',
-    initiator: `eoa:${eoa}` as PrefixedAddress,
-    avatar: withPrefix(safe),
-  }
-}
-
-function createRouteEoaRolesDelaySafe({
-  eoa,
-  roles,
-  roleId,
-  delay,
-  safe,
-}: {
-  eoa: `0x${string}`
-  roles: Address
-  roleId: Hash
-  delay: Address
-  safe: Address
-}): Route {
-  return {
-    waypoints: [
-      {
-        account: {
-          type: AccountType.EOA,
-          prefixedAddress: `eoa:${eoa}`,
-          address: eoa as `0x${string}`,
-        },
-      },
-      {
-        account: {
-          type: AccountType.ROLES,
-          address: roles as `0x${string}`,
-          prefixedAddress: withPrefix(roles),
-          chain: testClient.chain.id,
-          multisend: [] as `0x${string}`[],
-          version: 2,
-        },
-        connection: {
-          type: ConnectionType.IS_MEMBER,
-          roles: [roleId],
-          from: `eoa:${eoa}`,
-        },
-      },
-      {
-        account: {
-          type: AccountType.DELAY,
-          address: delay as any,
-          prefixedAddress: withPrefix(delay),
-          chain: testClient.chain.id,
-        },
-        connection: {
-          type: ConnectionType.IS_ENABLED,
-          from: withPrefix(roles),
-        },
-      },
-      {
-        account: {
-          type: AccountType.SAFE,
-          address: safe as `0x${string}`,
-          prefixedAddress: withPrefix(safe),
-
-          chain: testClient.chain.id,
-          threshold: 1,
-        },
-        connection: {
-          type: ConnectionType.IS_ENABLED,
-          from: withPrefix(delay),
-        },
-      },
-    ],
-    id: 'test',
-    initiator: `eoa:${eoa}`,
-    avatar: withPrefix(safe),
-  }
-}
