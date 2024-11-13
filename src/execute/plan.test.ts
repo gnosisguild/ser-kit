@@ -246,7 +246,7 @@ describe('plan', () => {
   })
 
   describe('EOA --owns--> SAFE1/1 --owns--> SAFE1/1', () => {
-    it('plans execution', async () => {
+    it('plans and executes', async () => {
       const eoa = privateKeyToAccount(randomHash())
       const receiver = privateKeyToAccount(randomHash()).address
 
@@ -300,7 +300,7 @@ describe('plan', () => {
         parseEther('1')
       )
     })
-    it('plans execution independently', async () => {
+    it('plans and executes independently', async () => {
       const eoa = privateKeyToAccount(randomHash())
       const receiver = privateKeyToAccount(randomHash()).address
 
@@ -392,7 +392,7 @@ describe('plan', () => {
   })
 
   describe('EOA --owns--> SAFE1/1 --enabled--> SAFE1/1', () => {
-    it('plans execution', async () => {
+    it('plans and executes', async () => {
       const eoa = privateKeyToAccount(randomHash())
       const someoneelse = privateKeyToAccount(randomHash())
       const receiver = privateKeyToAccount(randomHash())
@@ -462,7 +462,7 @@ describe('plan', () => {
       ).toEqual(parseEther('1'))
     })
 
-    it('plans execution independently', async () => {
+    it('plans and executes independently', async () => {
       const eoa = privateKeyToAccount(randomHash())
       const someoneelse = privateKeyToAccount(randomHash())
       const receiver = privateKeyToAccount(randomHash())
@@ -560,7 +560,7 @@ describe('plan', () => {
   })
 
   describe('EOA --member--> ROLES --enabled--> SAFE*/*', () => {
-    it('plans execution', async () => {
+    it('plans and executes', async () => {
       const owner = privateKeyToAccount(randomHash())
       const member = privateKeyToAccount(randomHash())
       const receiver = privateKeyToAccount(randomHash())
@@ -629,7 +629,7 @@ describe('plan', () => {
       ).toEqual(parseEther('0.123'))
     })
 
-    it('plans execution independently', async () => {
+    it('plans and executes independently', async () => {
       const owner = privateKeyToAccount(randomHash())
       const member = privateKeyToAccount(randomHash())
       const receiver = privateKeyToAccount(randomHash())
@@ -700,7 +700,7 @@ describe('plan', () => {
   })
 
   describe('EOA --enabled--> DELAY --enabled--> SAFE*/*', () => {
-    it('plans execution', async () => {
+    it('plans and executes', async () => {
       const owner = privateKeyToAccount(randomHash())
       const eoa = privateKeyToAccount(randomHash())
       const receiver = privateKeyToAccount(randomHash())
@@ -799,7 +799,7 @@ describe('plan', () => {
       ).toEqual(parseEther('0.123'))
     })
 
-    it('plans execution independently', async () => {
+    it('plans and executes independently', async () => {
       const owner = privateKeyToAccount(randomHash())
       const eoa = privateKeyToAccount(randomHash())
       const receiver = privateKeyToAccount(randomHash())
@@ -901,7 +901,7 @@ describe('plan', () => {
   })
 
   describe('EOA --member--> ROLES --enabled--> SAFE*/* --owns--> SAFE1/1', () => {
-    it('plans execution', async () => {
+    it('plans and executes', async () => {
       const owner = privateKeyToAccount(randomHash())
       const member = privateKeyToAccount(randomHash())
       const receiver = privateKeyToAccount(randomHash())
@@ -1034,7 +1034,7 @@ describe('plan', () => {
       ).toEqual(parseEther('0.123'))
     })
 
-    it('plans execution independently', async () => {
+    it('plans and executes independently', async () => {
       const owner = privateKeyToAccount(hashMessage('1'))
       const member = privateKeyToAccount(hashMessage('2'))
       const receiver = privateKeyToAccount(hashMessage('3'))
@@ -1178,7 +1178,7 @@ describe('plan', () => {
   })
 
   describe('EOA --member--> ROLES --enabled--> DELAY --enabled--> SAFE*/*', () => {
-    it('plans execution', async () => {
+    it('plans and executes', async () => {
       const owner = privateKeyToAccount(randomHash())
       const eoa = privateKeyToAccount(randomHash())
       const receiver = privateKeyToAccount(randomHash())
@@ -1280,7 +1280,7 @@ describe('plan', () => {
       ).toEqual(parseEther('0.123'))
     })
 
-    it('plans execution independently', async () => {
+    it('plans and executes independently', async () => {
       const owner = privateKeyToAccount(randomHash())
       const eoa = privateKeyToAccount(randomHash())
       const receiver = privateKeyToAccount(randomHash())
