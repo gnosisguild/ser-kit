@@ -26,7 +26,7 @@ const safeAbi = parseAbi([
 ])
 
 describe('eip712', () => {
-  it('correctly produces and hashes SafeTrasactionTypedData', async () => {
+  it('correctly produces and hashes SafeTransactionTypedData', async () => {
     const safe = await deploySafe({
       owners: [makeAddress(3)],
       threshold: 1,
