@@ -87,11 +87,6 @@ export const execute = async (
 
         const previousOutput = state[i - 1]
 
-        if (action.signature && previousOutput) {
-          console.warn(
-            '`SAFE_TRANSACTION` action already has a signature, ignoring previous action output'
-          )
-        }
         let signature = action.signature || previousOutput
         if (!signature) {
           throw new Error(
@@ -123,11 +118,6 @@ export const execute = async (
             `Invalid prefixed address for a Safe account: ${safe}`
           )
 
-        if (action.signature && previousOutput) {
-          console.warn(
-            '`PROPOSE_SAFE_TRANSACTION` action already has a signature, ignoring previous action output'
-          )
-        }
         let signature = action.signature || previousOutput
         if (!signature) {
           throw new Error(

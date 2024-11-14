@@ -41,6 +41,7 @@ import { typedDataForSafeTransaction } from '../eip712'
 import {
   ExecuteTransactionAction,
   ExecutionActionType,
+  SafeTransactionAction,
   type ExecutionAction,
   type ExecutionPlan,
   type SafeTransactionProperties,
@@ -92,10 +93,11 @@ export const planExecution = async (
   const waypoints = route.waypoints
   let result: ExecutionAction[] = [
     {
-      type: ExecutionActionType.EXECUTE_TRANSACTION,
-      chain: chainId,
-      from: route.avatar,
-      transaction,
+      type: ExecutionActionType.SAFE_TRANSACTION,
+
+      safe: route.avatar,
+      safeTransaction: transaction as SafeTransactionData,
+      signature: null,
     },
   ]
 
@@ -139,7 +141,7 @@ const planAsEOA = async (
     return [
       {
         type: ExecutionActionType.SIGN_TYPED_DATA,
-        chain: splitPrefixedAddress(waypoint.account.prefixedAddress)[0]!,
+        chain: right.account.chain,
         from: waypoint.account.prefixedAddress,
         data: typedData,
       },
@@ -171,6 +173,8 @@ const planAsSafe = async (
       request.type == ExecutionActionType.EXECUTE_TRANSACTION
   )
 
+  const isAnchor = right == null
+
   /*
    * We divide plan into two sections: IN and OUT.
    *
@@ -187,12 +191,21 @@ const planAsSafe = async (
    */
 
   // IN
-  let transaction, result
-  if (request.type == ExecutionActionType.EXECUTE_TRANSACTION) {
-    transaction = request.transaction
-    result = [] as ExecutionAction[]
-  } else {
-    assert(right && right.account.type == AccountType.SAFE)
+  let transaction: MetaTransactionData =
+    (request as ExecuteTransactionAction).transaction ||
+    (request as SafeTransactionAction).safeTransaction
+  let result = [] as ExecutionAction[]
+
+  if (
+    (request.type == ExecutionActionType.SAFE_TRANSACTION ||
+      request.type == ExecutionActionType.PROPOSE_TRANSACTION) &&
+    !isAnchor
+  ) {
+    assert(right.account.type == AccountType.SAFE)
+    assert(
+      request.type == ExecutionActionType.SAFE_TRANSACTION ||
+        request.type == ExecutionActionType.PROPOSE_TRANSACTION
+    )
     const typedData = typedDataForSafeTransaction({
       chainId: right.account.chain,
       safeAddress: right.account.address,
