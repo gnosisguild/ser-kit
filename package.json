@@ -26,15 +26,15 @@
     "test": "bun test --timeout 10000"
   },
   "devDependencies": {
+    "@gnosis-guild/zodiac-core": "^2.0.4",
     "@types/bun": "^1.1.12",
     "@types/wait-on": "^5.3.4",
     "prettier": "^3.3.3",
     "tsup": "^8.1.0",
     "typescript": "^5.6.3",
-    "wait-on": "^7.2.0"
+    "wait-on": "8.0.1"
   },
-  "dependencies": {
-    "@gnosis-guild/zodiac-core": "^2.0.4",
+  "dependencies": {   
     "@safe-global/api-kit": "^2.5.3",
     "@safe-global/protocol-kit": "^5.0.3",
     "@safe-global/safe-deployments": "^1.37.13",
