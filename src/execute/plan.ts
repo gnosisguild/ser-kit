@@ -6,11 +6,7 @@ import {
   hashTypedData,
   zeroAddress,
 } from 'viem'
-import {
-  OperationType,
-  SafeTransactionData,
-  type MetaTransactionData,
-} from '@safe-global/types-kit'
+import { OperationType } from '@safe-global/types-kit'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 
 import { encodeMultiSend } from './multisend'
@@ -42,6 +38,8 @@ import {
   ExecuteTransactionAction,
   ExecutionActionType,
   SafeTransactionAction,
+  MetaTransactionRequest,
+  SafeTransactionRequest,
   type ExecutionAction,
   type ExecutionPlan,
   type SafeTransactionProperties,
@@ -70,7 +68,7 @@ interface Options {
  * @param options Optional parameters to customize the execution.
  */
 export const planExecution = async (
-  transactions: readonly MetaTransactionData[],
+  transactions: readonly MetaTransactionRequest[],
   route: Route,
   options: Options
 ): Promise<ExecutionPlan> => {
@@ -96,7 +94,7 @@ export const planExecution = async (
       type: ExecutionActionType.SAFE_TRANSACTION,
 
       safe: route.avatar,
-      safeTransaction: transaction as SafeTransactionData,
+      safeTransaction: transaction as SafeTransactionRequest,
       signature: null,
     },
   ]
@@ -191,7 +189,7 @@ const planAsSafe = async (
    */
 
   // IN
-  let transaction: MetaTransactionData =
+  let transaction: MetaTransactionRequest =
     (request as ExecuteTransactionAction).transaction ||
     (request as SafeTransactionAction).safeTransaction
   let result = [] as ExecutionAction[]
@@ -213,7 +211,7 @@ const planAsSafe = async (
     })
     transaction = {
       to: right.account.address,
-      value: '0',
+      value: 0n,
       data: encodeApproveHashData(hashTypedData(typedData)),
     }
     result = [
@@ -232,7 +230,7 @@ const planAsSafe = async (
           ? ExecutionActionType.PROPOSE_TRANSACTION
           : ExecutionActionType.SAFE_TRANSACTION,
         safe: waypoint.account.prefixedAddress,
-        safeTransaction: await populateSafeTransaction({
+        safeTransaction: await prepareSafeTransaction({
           chainId: waypoint.account.chain,
           safe: waypoint.account.address,
           transaction,
@@ -254,7 +252,7 @@ const planAsSafe = async (
         transaction: {
           to: waypoint.account.address,
           data: encodeExecTransactionFromModuleData(transaction),
-          value: '0',
+          value: 0n,
         },
         from: left!.account.prefixedAddress,
         chain: waypoint.account.chain,
@@ -310,7 +308,7 @@ const planAsRoles = async (
       transaction: {
         to: waypoint.account.address,
         data: encodeExecTransactionWithRoleData(transaction, role, version),
-        value: '0',
+        value: 0n,
       },
       from: left.account.prefixedAddress,
     },
@@ -340,7 +338,7 @@ const planAsDelay = async (
       transaction: {
         to: waypoint.account.address,
         data: encodeExecTransactionFromModuleData(transaction),
-        value: '0',
+        value: 0n,
       },
       from: left.account.prefixedAddress,
     },
@@ -350,7 +348,7 @@ const planAsDelay = async (
       transaction: {
         to: waypoint.account.address,
         data: encodeExecuteNextTxData(transaction),
-        value: '0',
+        value: 0n,
       },
       from: left.account.prefixedAddress,
     },
@@ -367,7 +365,7 @@ function shouldPropose(waypoint: Waypoint | StartingPoint, options?: Options) {
   return proposeOnly || !canExecute
 }
 
-async function populateSafeTransaction({
+async function prepareSafeTransaction({
   chainId,
   safe,
   transaction,
@@ -375,9 +373,9 @@ async function populateSafeTransaction({
 }: {
   chainId: ChainId
   safe: Address
-  transaction: MetaTransactionData
+  transaction: MetaTransactionRequest
   options: Options
-}) {
+}): Promise<SafeTransactionRequest> {
   if (!options.providers || !options.providers[chainId]) {
     throw new Error('Provider is required')
   }
@@ -407,13 +405,15 @@ async function populateSafeTransaction({
     value: transaction.value,
     data: transaction.data,
     operation: transaction.operation ?? OperationType.Call,
-    safeTxGas: Number(defaults?.safeTxGas || 0),
-    baseGas: Number(defaults?.baseGas || 0),
-    gasPrice: Number(defaults?.gasPrice || 0),
-    gasToken: getAddress(defaults?.gasToken || zeroAddress),
-    refundReceiver: getAddress(defaults?.refundReceiver || zeroAddress),
-    nonce: defaults?.nonce || nonce,
-  } as unknown as SafeTransactionData
+    safeTxGas: BigInt(defaults?.safeTxGas || 0),
+    baseGas: BigInt(defaults?.baseGas || 0),
+    gasPrice: BigInt(defaults?.gasPrice || 0),
+    gasToken: getAddress(defaults?.gasToken || zeroAddress) as `0x${string}`,
+    refundReceiver: getAddress(
+      defaults?.refundReceiver || zeroAddress
+    ) as `0x${string}`,
+    nonce: Number(defaults?.nonce || nonce),
+  }
 }
 
 function pointers(waypoints: Route['waypoints'], index: number) {

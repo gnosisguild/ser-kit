@@ -1,8 +1,11 @@
 import { decodeFunctionData, encodeFunctionData, Hex, parseAbi } from 'viem'
-import { type MetaTransactionData } from '@safe-global/types-kit'
 
 import { parsePrefixedAddress } from '../addresses'
-import { ExecuteTransactionAction, SafeTransactionAction } from './types'
+import {
+  ExecuteTransactionAction,
+  MetaTransactionRequest,
+  SafeTransactionAction,
+} from './types'
 
 const safeAbi = parseAbi([
   'function approveHash(bytes32 hashToApprove)',
@@ -13,7 +16,7 @@ const safeAbi = parseAbi([
 
 export function unwrapExecuteTransaction(
   action: ExecuteTransactionAction
-): MetaTransactionData {
+): MetaTransactionRequest {
   const {
     args: [to, value, data, operation],
   } = decodeFunctionData({
@@ -21,7 +24,12 @@ export function unwrapExecuteTransaction(
     data: action.transaction.data as any,
   })
 
-  return { to: to!, value: String(value), data: data!, operation }
+  return {
+    to: to! as `0x{string}`,
+    value: value!,
+    data: data!,
+    operation,
+  }
 }
 
 export const encodeSafeTransaction = (action: SafeTransactionAction) => {

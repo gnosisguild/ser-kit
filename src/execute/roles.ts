@@ -1,5 +1,5 @@
 import { encodeFunctionData } from 'viem'
-import { type MetaTransactionData } from '@safe-global/types-kit'
+import { MetaTransactionRequest } from './types'
 
 const ROLES_V1_ABI = [
   {
@@ -72,7 +72,7 @@ const ROLES_V2_ABI = [
 ] as const
 
 export const encodeExecTransactionWithRoleData = (
-  transaction: MetaTransactionData,
+  transaction: MetaTransactionRequest,
   role: string,
   version: 1 | 2
 ): `0x${string}` => {

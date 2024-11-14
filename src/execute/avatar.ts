@@ -1,5 +1,6 @@
 import { encodeFunctionData, Hash, Hex, parseAbi } from 'viem'
-import { OperationType, type MetaTransactionData } from '@safe-global/types-kit'
+import { OperationType } from '@safe-global/types-kit'
+import { MetaTransactionRequest } from './types'
 
 export const avatarAbi = parseAbi([
   'function approveHash(bytes32 hashToApprove)',
@@ -18,7 +19,7 @@ export const encodeApproveHashData = (hashToApprove: Hash): Hex => {
 }
 
 export const encodeExecTransactionFromModuleData = (
-  transaction: MetaTransactionData
+  transaction: MetaTransactionRequest
 ): Hex => {
   return encodeFunctionData({
     abi: avatarAbi,
@@ -26,7 +27,7 @@ export const encodeExecTransactionFromModuleData = (
     args: [
       transaction.to,
       BigInt(transaction.value),
-      transaction.data as Hex,
+      transaction.data,
       transaction.operation || OperationType.Call,
     ],
   })

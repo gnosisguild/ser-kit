@@ -1,10 +1,11 @@
 import { concat, encodeFunctionData, encodePacked, hexToBytes } from 'viem'
-import { OperationType, type MetaTransactionData } from '@safe-global/types-kit'
+import { OperationType } from '@safe-global/types-kit'
+import { MetaTransactionRequest } from './types'
 
 export const encodeMultiSend = (
-  transactions: readonly MetaTransactionData[],
+  transactions: readonly MetaTransactionRequest[],
   preferredAddresses: `0x${string}`[] = []
-): MetaTransactionData => {
+): MetaTransactionRequest => {
   if (transactions.length === 0) {
     throw new Error('No transactions to encode')
   }
@@ -15,7 +16,7 @@ export const encodeMultiSend = (
 
   return {
     to: multiSendAddress(transactions, preferredAddresses),
-    value: '0',
+    value: 0n,
     data: encodeMultiSendData(transactions),
     operation: OperationType.DelegateCall,
   }
@@ -38,7 +39,7 @@ const MULTI_SEND_ABI = [
 ] as const
 
 const encodeMultiSendData = (
-  transactions: readonly MetaTransactionData[]
+  transactions: readonly MetaTransactionRequest[]
 ): `0x${string}` => {
   const packedTransactions = transactions.map((tx) =>
     encodePacked(
@@ -76,7 +77,7 @@ const KNOWN_MULTI_SEND_CALL_ONLY_ADDRESSES = [
 ]
 
 const multiSendAddress = (
-  transactions: readonly MetaTransactionData[],
+  transactions: readonly MetaTransactionRequest[],
   preferredAddresses: `0x${string}`[] = []
 ): `0x${string}` => {
   const callOnly = transactions.every(

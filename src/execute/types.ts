@@ -1,8 +1,5 @@
-import type { Address, TypedDataDomain } from 'viem'
-import type {
-  MetaTransactionData,
-  SafeTransactionData,
-} from '@safe-global/types-kit'
+import type { Address, Hex, TypedDataDomain } from 'viem'
+import type { OperationType } from '@safe-global/types-kit'
 import type { SafeTransactionOptionalProps } from '@safe-global/protocol-kit'
 
 import type { ChainId, PrefixedAddress } from '../types'
@@ -18,7 +15,7 @@ export enum ExecutionActionType {
 /** Represents a transaction to be sent from the specified account */
 export interface ExecuteTransactionAction {
   type: ExecutionActionType.EXECUTE_TRANSACTION
-  transaction: MetaTransactionData
+  transaction: TransactionRequest
   from: PrefixedAddress
   chain: ChainId
 }
@@ -57,7 +54,7 @@ export interface SignTypedDataAction {
 export interface ProposeTransactionAction {
   type: ExecutionActionType.PROPOSE_TRANSACTION
   safe: PrefixedAddress
-  safeTransaction: SafeTransactionData
+  safeTransaction: SafeTransactionRequest
 
   proposer: Address
   /** If set to null, the previous action's output will be inserted as signature */
@@ -67,7 +64,7 @@ export interface ProposeTransactionAction {
 export interface SafeTransactionAction {
   type: ExecutionActionType.SAFE_TRANSACTION
   safe: PrefixedAddress
-  safeTransaction: SafeTransactionData
+  safeTransaction: SafeTransactionRequest
 
   /** If set to null, the previous action's output will be inserted as signature */
   signature: `0x${string}` | null
@@ -108,4 +105,24 @@ export interface SafeTransactionProperties
    * on-chain
    **/
   onchainSignature?: boolean
+}
+
+export interface TransactionRequest {
+  to: Hex
+  data: Hex
+  value: bigint
+}
+
+export interface MetaTransactionRequest extends TransactionRequest {
+  operation?: OperationType
+}
+
+export interface SafeTransactionRequest extends MetaTransactionRequest {
+  operation: OperationType
+  safeTxGas: bigint
+  baseGas: bigint
+  gasPrice: bigint
+  gasToken: Hex
+  refundReceiver: Hex
+  nonce: number
 }

@@ -1,5 +1,6 @@
 import { encodeFunctionData, parseAbi } from 'viem'
-import { type MetaTransactionData } from '@safe-global/types-kit'
+import { MetaTransactionRequest } from './types'
+import { OperationType } from '@safe-global/types-kit'
 
 const abi = parseAbi([
   'function execTransactionFromModule(address to, uint256 value, bytes data, uint8 operation) returns (bool success)',
@@ -7,31 +8,31 @@ const abi = parseAbi([
 ])
 
 export const encodeExecTransactionFromModuleData = (
-  transaction: MetaTransactionData
+  transaction: MetaTransactionRequest
 ): `0x${string}` => {
   return encodeFunctionData({
     abi,
     functionName: 'execTransactionFromModule',
     args: [
-      transaction.to as `0x${string}`,
-      BigInt(transaction.value),
-      transaction.data as `0x${string}`,
-      transaction.operation || 0,
+      transaction.to,
+      BigInt(transaction.value || 0),
+      transaction.data,
+      transaction.operation || OperationType.Call,
     ],
   })
 }
 
 export const encodeExecuteNextTxData = (
-  transaction: MetaTransactionData
+  transaction: MetaTransactionRequest
 ): `0x${string}` => {
   return encodeFunctionData({
     abi,
     functionName: 'executeNextTx',
     args: [
-      transaction.to as `0x${string}`,
-      BigInt(transaction.value),
-      transaction.data as `0x${string}`,
-      transaction.operation || 0,
+      transaction.to,
+      transaction.value,
+      transaction.data,
+      transaction.operation || OperationType.Call,
     ],
   })
 }

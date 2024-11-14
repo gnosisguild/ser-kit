@@ -57,13 +57,7 @@ export const execute = async (
           provider,
         })
 
-        state.push(
-          await walletClient.sendTransaction({
-            to: action.transaction.to as `0x${string}`,
-            value: BigInt(action.transaction.value),
-            data: action.transaction.data as `0x${string}`,
-          })
-        )
+        state.push(await walletClient.sendTransaction(action.transaction))
         break
       }
       case ExecutionActionType.SIGN_TYPED_DATA: {
@@ -87,7 +81,7 @@ export const execute = async (
 
         const previousOutput = state[i - 1]
 
-        let signature = action.signature || previousOutput
+        const signature = action.signature || previousOutput
         if (!signature) {
           throw new Error(
             'Signature is required for running a Safe transaction'
@@ -135,9 +129,12 @@ export const execute = async (
           safeTransactionData: {
             ...safeTransaction,
             // The Safe tx service requires checksummed addresses
-            to: getAddress(safeTransaction.to),
+            to: getAddress(safeTransaction.to) as `0x${string}`,
             // The Safe tx service requires decimal values
-            value: BigInt(safeTransaction.value).toString(10),
+            value: safeTransaction.value.toString(10),
+            safeTxGas: String(safeTransaction.safeTxGas),
+            baseGas: String(safeTransaction.baseGas),
+            gasPrice: String(safeTransaction.gasPrice),
           },
           safeTxHash,
           senderAddress: parsePrefixedAddress(proposer),

@@ -16,6 +16,7 @@ import { AccountType, ConnectionType, PrefixedAddress, Route } from '../types'
 import {
   ExecuteTransactionAction,
   ExecutionActionType,
+  MetaTransactionRequest,
   SafeTransactionAction,
   SignTypedDataAction,
 } from './types'
@@ -72,8 +73,8 @@ describe('plan', () => {
         [
           {
             data: '0x',
-            to: receiver.address,
-            value: String(parseEther('1')),
+            to: receiver.address as `0x{string}`,
+            value: parseEther('1'),
             operation: OperationType.Call,
           },
         ],
@@ -129,8 +130,8 @@ describe('plan', () => {
         [
           {
             data: '0x',
-            to: receiver.address,
-            value: String(parseEther('1')),
+            to: receiver.address as `0x${string}`,
+            value: parseEther('1'),
             operation: OperationType.Call,
           },
         ],
@@ -187,10 +188,10 @@ describe('plan', () => {
         threshold: 1,
       })
 
-      const transaction = {
+      const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address,
-        value: String(parseEther('1')),
+        to: receiver.address as `0x${string}`,
+        value: parseEther('1'),
         operation: OperationType.Call,
       }
 
@@ -226,11 +227,11 @@ describe('plan', () => {
         threshold: 2,
       })
 
-      const transaction = {
+      const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address,
-        value: '0',
-        operation: 1,
+        to: receiver.address as `0x${string}`,
+        value: parseEther('1'),
+        operation: OperationType.Call,
       }
 
       const chainId = testClient.chain.id
@@ -272,20 +273,17 @@ describe('plan', () => {
 
       const chainId = testClient.chain.id
 
+      const transaction: MetaTransactionRequest = {
+        data: '0x',
+        to: receiver as `0x${string}`,
+        value: parseEther('1'),
+        operation: OperationType.Call,
+      }
+
       // plan a transfer of 1 eth into receiver
-      const plan = await planExecution(
-        [
-          {
-            data: '0x',
-            to: receiver,
-            value: String(parseEther('1')),
-          },
-        ],
-        route,
-        {
-          providers: { [chainId]: testClient as Eip1193Provider },
-        }
-      )
+      const plan = await planExecution([transaction], route, {
+        providers: { [chainId]: testClient as Eip1193Provider },
+      })
 
       expect(plan).toHaveLength(3)
 
@@ -331,20 +329,17 @@ describe('plan', () => {
 
       const chainId = testClient.chain.id
 
+      const transaction: MetaTransactionRequest = {
+        data: '0x',
+        to: receiver as `0x${string}`,
+        value: parseEther('1'),
+        operation: OperationType.Call,
+      }
+
       // plan a transfer of 1 eth into receiver
-      const plan = await planExecution(
-        [
-          {
-            data: '0x',
-            to: receiver,
-            value: String(parseEther('1')),
-          },
-        ],
-        route,
-        {
-          providers: { [chainId]: testClient as Eip1193Provider },
-        }
-      )
+      const plan = await planExecution([transaction], route, {
+        providers: { [chainId]: testClient as Eip1193Provider },
+      })
 
       expect(plan).toHaveLength(3)
 
@@ -432,20 +427,17 @@ describe('plan', () => {
 
       const chainId = testClient.chain.id
 
+      const transaction: MetaTransactionRequest = {
+        data: '0x',
+        to: receiver.address as `0x${string}`,
+        value: parseEther('1'),
+        operation: OperationType.Call,
+      }
+
       // plan a transfer of 1 eth into receiver
-      const plan = await planExecution(
-        [
-          {
-            data: '0x',
-            to: receiver.address,
-            value: String(parseEther('1')),
-          },
-        ],
-        route,
-        {
-          providers: { [chainId]: testClient as Eip1193Provider },
-        }
-      )
+      const plan = await planExecution([transaction], route, {
+        providers: { [chainId]: testClient as Eip1193Provider },
+      })
 
       expect(plan).toHaveLength(2)
 
@@ -518,8 +510,9 @@ describe('plan', () => {
         [
           {
             data: '0x',
-            to: receiver.address,
-            value: String(parseEther('1')),
+            to: receiver.address as `0x${string}`,
+            value: parseEther('1'),
+            operation: OperationType.Call,
           },
         ],
         route,
@@ -589,19 +582,16 @@ describe('plan', () => {
         safe,
       })
 
-      const plan = await planExecution(
-        [
-          {
-            data: '0x',
-            to: receiver.address,
-            value: String(parseEther('0.123')),
-          },
-        ],
-        route,
-        {
-          providers: { [testClient.chain.id]: testClient as Eip1193Provider },
-        }
-      )
+      const transaction: MetaTransactionRequest = {
+        data: '0x',
+        to: receiver.address as `0x${string}`,
+        value: parseEther('0.123'),
+        operation: OperationType.Call,
+      }
+
+      const plan = await planExecution([transaction], route, {
+        providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+      })
 
       expect(plan).toHaveLength(1)
 
@@ -658,19 +648,16 @@ describe('plan', () => {
         safe,
       })
 
-      const plan = await planExecution(
-        [
-          {
-            data: '0x',
-            to: receiver.address,
-            value: String(parseEther('0.123')),
-          },
-        ],
-        route,
-        {
-          providers: { [testClient.chain.id]: testClient as Eip1193Provider },
-        }
-      )
+      const transaction: MetaTransactionRequest = {
+        data: '0x',
+        to: receiver.address as `0x${string}`,
+        value: parseEther('0.123'),
+        operation: OperationType.Call,
+      }
+
+      const plan = await planExecution([transaction], route, {
+        providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+      })
 
       expect(plan).toHaveLength(1)
 
@@ -738,19 +725,16 @@ describe('plan', () => {
         safe,
       })
 
-      const plan = await planExecution(
-        [
-          {
-            data: '0x',
-            to: receiver.address,
-            value: String(parseEther('0.123')),
-          },
-        ],
-        route,
-        {
-          providers: { [testClient.chain.id]: testClient as Eip1193Provider },
-        }
-      )
+      const transaction: MetaTransactionRequest = {
+        data: '0x',
+        to: receiver.address as `0x${string}`,
+        value: parseEther('0.123'),
+        operation: OperationType.Call,
+      }
+
+      const plan = await planExecution([transaction], route, {
+        providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+      })
 
       expect(plan).toHaveLength(2)
 
@@ -835,19 +819,16 @@ describe('plan', () => {
         safe,
       })
 
-      const plan = await planExecution(
-        [
-          {
-            data: '0x',
-            to: receiver.address,
-            value: String(parseEther('0.123')),
-          },
-        ],
-        route,
-        {
-          providers: { [testClient.chain.id]: testClient as Eip1193Provider },
-        }
-      )
+      const transaction: MetaTransactionRequest = {
+        data: '0x',
+        to: receiver.address as `0x${string}`,
+        value: parseEther('0.123'),
+        operation: OperationType.Call,
+      }
+
+      const plan = await planExecution([transaction], route, {
+        providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+      })
 
       expect(plan).toHaveLength(2)
 
@@ -992,19 +973,16 @@ describe('plan', () => {
         avatar: withPrefix(safe2),
       } as Route
 
-      const plan = await planExecution(
-        [
-          {
-            data: '0x',
-            to: receiver.address,
-            value: String(parseEther('0.123')),
-          },
-        ],
-        route,
-        {
-          providers: { [testClient.chain.id]: testClient as Eip1193Provider },
-        }
-      )
+      const transaction: MetaTransactionRequest = {
+        data: '0x',
+        to: receiver.address as `0x${string}`,
+        value: parseEther('0.123'),
+        operation: OperationType.Call,
+      }
+
+      const plan = await planExecution([transaction], route, {
+        providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+      })
 
       expect(await testClient.getBalance({ address: safe2 })).toEqual(
         parseEther('1')
@@ -1125,19 +1103,16 @@ describe('plan', () => {
         avatar: withPrefix(safe2),
       } as Route
 
-      const plan = await planExecution(
-        [
-          {
-            data: '0x',
-            to: receiver.address,
-            value: String(parseEther('0.123')),
-          },
-        ],
-        route,
-        {
-          providers: { [testClient.chain.id]: testClient as Eip1193Provider },
-        }
-      )
+      const transaction: MetaTransactionRequest = {
+        data: '0x',
+        to: receiver.address as `0x${string}`,
+        value: parseEther('0.123'),
+        operation: OperationType.Call,
+      }
+
+      const plan = await planExecution([transaction], route, {
+        providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+      })
 
       expect(plan).toHaveLength(2)
 
@@ -1224,19 +1199,16 @@ describe('plan', () => {
         safe,
       })
 
-      const plan = await planExecution(
-        [
-          {
-            data: '0x',
-            to: receiver.address,
-            value: String(parseEther('0.123')),
-          },
-        ],
-        route,
-        {
-          providers: { [testClient.chain.id]: testClient as Eip1193Provider },
-        }
-      )
+      const transaction: MetaTransactionRequest = {
+        data: '0x',
+        to: receiver.address as `0x${string}`,
+        value: parseEther('0.123'),
+        operation: OperationType.Call,
+      }
+
+      const plan = await planExecution([transaction], route, {
+        providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+      })
 
       expect(plan).toHaveLength(2)
 
@@ -1326,19 +1298,16 @@ describe('plan', () => {
         safe,
       })
 
-      const plan = await planExecution(
-        [
-          {
-            data: '0x',
-            to: receiver.address,
-            value: String(parseEther('0.123')),
-          },
-        ],
-        route,
-        {
-          providers: { [testClient.chain.id]: testClient as Eip1193Provider },
-        }
-      )
+      const transaction: MetaTransactionRequest = {
+        data: '0x',
+        to: receiver.address as `0x${string}`,
+        value: parseEther('0.123'),
+        operation: OperationType.Call,
+      }
+
+      const plan = await planExecution([transaction], route, {
+        providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+      })
 
       expect(plan).toHaveLength(2)
 
@@ -1350,8 +1319,8 @@ describe('plan', () => {
       expect(execute1.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
       expect(execute2.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
 
-      expect(execute1.transaction.to).toEqual(roles)
-      expect(execute2.transaction.to).toEqual(delay)
+      expect(execute1.transaction.to).toEqual(roles as any)
+      expect(execute2.transaction.to).toEqual(delay as any)
 
       expect(await testClient.getBalance({ address: safe })).toEqual(
         parseEther('10')
