@@ -200,10 +200,6 @@ const planAsSafe = async (
     !isAnchor
   ) {
     assert(right.account.type == AccountType.SAFE)
-    assert(
-      request.type == ExecutionActionType.SAFE_TRANSACTION ||
-        request.type == ExecutionActionType.PROPOSE_TRANSACTION
-    )
     const typedData = typedDataForSafeTransaction({
       chainId: right.account.chain,
       safeAddress: right.account.address,
