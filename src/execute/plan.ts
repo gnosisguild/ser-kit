@@ -1,6 +1,7 @@
 import assert from 'assert'
 import {
   Address,
+  decodeFunctionData,
   encodeFunctionData,
   getAddress,
   hashTypedData,
@@ -10,7 +11,6 @@ import {
 import { OperationType } from '@safe-global/types-kit'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 
-import { unwrapExecuteTransaction } from './action'
 import { encodeMultiSend } from './multisend'
 import { createPreApprovedSignature } from './signatures'
 
@@ -418,6 +418,30 @@ async function prepareSafeTransaction({
       defaults?.refundReceiver || zeroAddress
     ) as `0x${string}`,
     nonce: Number(defaults?.nonce || nonce),
+  }
+}
+
+function unwrapExecuteTransaction(
+  action: ExecuteTransactionAction
+): MetaTransactionRequest {
+  const abi = parseAbi([
+    'function approveHash(bytes32 hashToApprove)',
+    'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures) payable returns (bool success)',
+    'function execTransactionFromModule(address to, uint256 value, bytes data, uint8 operation) returns (bool success)',
+  ])
+
+  const {
+    args: [to, value, data, operation],
+  } = decodeFunctionData({
+    abi,
+    data: action.transaction.data as any,
+  })
+
+  return {
+    to: to! as `0x${string}`,
+    value: value!,
+    data: data!,
+    operation,
   }
 }
 
