@@ -1,5 +1,5 @@
 import { encodeFunctionData } from 'viem'
-import { MetaTransactionRequest } from './types'
+import { MetaTransactionRequest } from '../types'
 
 const ROLES_V1_ABI = [
   {

@@ -11,6 +11,7 @@ import {
 import { type Eip1193Provider } from '@safe-global/protocol-kit'
 import SafeApiKit from '@safe-global/api-kit'
 
+import { encodeSafeTransaction } from './action'
 import { chains, defaultRpc } from '../chains'
 import { typedDataForSafeTransaction } from '../eip712'
 
@@ -20,7 +21,6 @@ import {
   type ExecutionState,
 } from './types'
 import type { ChainId } from '../types'
-import { encodeSafeTransaction } from './action'
 
 /**
  * Executes the given plan, continuing from the given state. Mutates the state array to track execution progress.

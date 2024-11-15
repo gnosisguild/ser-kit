@@ -112,23 +112,3 @@ export interface SafeTransactionProperties
    **/
   onchainSignature?: boolean
 }
-
-export interface TransactionRequest {
-  to: Hex
-  data: Hex
-  value: bigint
-}
-
-export interface MetaTransactionRequest extends TransactionRequest {
-  operation?: OperationType
-}
-
-export interface SafeTransactionRequest extends MetaTransactionRequest {
-  operation: OperationType
-  safeTxGas: bigint
-  baseGas: bigint
-  gasPrice: bigint
-  gasToken: Hex
-  refundReceiver: Hex
-  nonce: number
-}

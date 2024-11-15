@@ -1,6 +1,6 @@
 import { concat, encodeFunctionData, encodePacked, hexToBytes } from 'viem'
 import { OperationType } from '@safe-global/types-kit'
-import { MetaTransactionRequest } from './types'
+import { MetaTransactionRequest } from '../types'
 
 export const encodeMultiSend = (
   transactions: readonly MetaTransactionRequest[],

@@ -8,11 +8,16 @@ import { OperationType } from '@safe-global/types-kit'
 import { encodeSafeTransaction } from './action'
 import { formatPrefixedAddress } from '../addresses'
 
-import { AccountType, ConnectionType, PrefixedAddress, Route } from '../types'
 import {
-  ExecuteTransactionAction,
-  ExecutionActionType,
+  AccountType,
+  ConnectionType,
   MetaTransactionRequest,
+  PrefixedAddress,
+  Route,
+} from '../types'
+import {
+  ExecutionActionType,
+  ExecuteTransactionAction,
   SafeTransactionAction,
   SignTypedDataAction,
 } from './types'

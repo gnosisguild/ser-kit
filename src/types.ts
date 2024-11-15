@@ -1,4 +1,26 @@
+import { Hex } from 'viem'
 import { chains } from './chains'
+import { OperationType } from '@safe-global/types-kit'
+
+export interface TransactionRequest {
+  to: Hex
+  data: Hex
+  value: bigint
+}
+
+export interface MetaTransactionRequest extends TransactionRequest {
+  operation?: OperationType
+}
+
+export interface SafeTransactionRequest extends MetaTransactionRequest {
+  operation: OperationType
+  safeTxGas: bigint
+  baseGas: bigint
+  gasPrice: bigint
+  gasToken: Hex
+  refundReceiver: Hex
+  nonce: number
+}
 
 export type ChainId = (typeof chains)[number]['chainId']
 export type ChainShortName = (typeof chains)[number]['shortName']

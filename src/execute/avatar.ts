@@ -1,6 +1,6 @@
 import { encodeFunctionData, Hash, Hex, parseAbi } from 'viem'
 import { OperationType } from '@safe-global/types-kit'
-import { MetaTransactionRequest } from './types'
+import { MetaTransactionRequest } from '../types'
 
 export const avatarAbi = parseAbi([
   'function approveHash(bytes32 hashToApprove)',

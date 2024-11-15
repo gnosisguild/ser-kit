@@ -9,12 +9,13 @@ import {
 import { OperationType } from '@safe-global/types-kit'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 
-import { encodeMultiSend } from './multisend'
 import {
   AccountType,
   ChainId,
   Connection,
   ConnectionType,
+  MetaTransactionRequest,
+  SafeTransactionRequest,
   StartingPoint,
   type PrefixedAddress,
   type Roles,
@@ -31,6 +32,7 @@ import {
 } from './avatar'
 import { encodeExecTransactionWithRoleData } from './roles'
 import { encodeExecuteNextTxData } from './delay'
+import { encodeMultiSend } from './multisend'
 import { formatPrefixedAddress, splitPrefixedAddress } from '../addresses'
 import { typedDataForSafeTransaction } from '../eip712'
 
@@ -38,8 +40,6 @@ import {
   ExecuteTransactionAction,
   ExecutionActionType,
   SafeTransactionAction,
-  MetaTransactionRequest,
-  SafeTransactionRequest,
   type ExecutionAction,
   type ExecutionPlan,
   type SafeTransactionProperties,

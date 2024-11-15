@@ -1,10 +1,7 @@
 import { decodeFunctionData, encodeFunctionData, Hex, parseAbi } from 'viem'
 
-import {
-  ExecuteTransactionAction,
-  MetaTransactionRequest,
-  SafeTransactionAction,
-} from './types'
+import { MetaTransactionRequest } from '../types'
+import { ExecuteTransactionAction, SafeTransactionAction } from './types'
 
 const safeAbi = parseAbi([
   'function approveHash(bytes32 hashToApprove)',

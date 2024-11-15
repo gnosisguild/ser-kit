@@ -1,5 +1,5 @@
 import { encodeFunctionData, parseAbi } from 'viem'
-import { MetaTransactionRequest } from './types'
+import { MetaTransactionRequest } from '../types'
 import { OperationType } from '@safe-global/types-kit'
 
 const abi = parseAbi([
