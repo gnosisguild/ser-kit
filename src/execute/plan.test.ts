@@ -5,7 +5,6 @@ import { privateKeyToAccount } from 'viem/accounts'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 import { OperationType } from '@safe-global/types-kit'
 
-import { encodeSafeTransaction } from './action'
 import { formatPrefixedAddress } from '../addresses'
 
 import {
@@ -44,6 +43,7 @@ import {
 
 import { planExecution } from './plan'
 import { execute } from './execute'
+import encodeExecTransaction from '../encode/execTransaction'
 
 const withPrefix = (address: Address) =>
   formatPrefixedAddress(testClient.chain.id, address)
@@ -157,7 +157,13 @@ describe('plan', () => {
 
       const signature = await signer.signTypedData(sign.typedData)
 
-      const transaction = await encodeSafeTransaction({ ...execute, signature })
+      const transaction = {
+        to: execute.safe,
+        data: await encodeExecTransaction({
+          safeTransaction: execute.safeTransaction,
+          signature,
+        }),
+      }
 
       expect(
         await testClient.getBalance({ address: receiver.address })
@@ -356,12 +362,17 @@ describe('plan', () => {
       const signature = await eoa.signTypedData(sign.typedData)
       expect(execute1.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
       expect(execute1.signature).toBe(null)
-      const transaction1 = await encodeSafeTransaction({
-        ...execute1,
-        signature,
-      })
+      const transaction1 = {
+        to: execute1.safe,
+        data: encodeExecTransaction({
+          ...execute1,
+          signature,
+        }),
+      }
 
-      expect(await testClient.getBalance({ address: receiver })).toEqual(0n)
+      await expect(await testClient.getBalance({ address: receiver })).toEqual(
+        0n
+      )
       await testClient.sendTransaction({
         account: deployer,
         ...transaction1,
@@ -370,7 +381,10 @@ describe('plan', () => {
 
       expect(execute2.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
       expect(execute2.signature).not.toBe(null)
-      const transaction2 = await encodeSafeTransaction(execute2)
+      const transaction2 = {
+        to: execute2.safe,
+        data: encodeExecTransaction(execute2),
+      }
 
       // Except the receiver to have 0, and afterwards 1
       expect(await testClient.getBalance({ address: receiver })).toEqual(0n)
@@ -530,9 +544,13 @@ describe('plan', () => {
       expect(sign.from).toEqual(getAddress(eoa.address))
 
       const signature = await eoa.signTypedData(sign.typedData)
+
       expect(execute.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
       expect(execute.signature).toBe(null)
-      const transaction = await encodeSafeTransaction({ ...execute, signature })
+      const transaction = {
+        to: execute.safe,
+        data: await encodeExecTransaction({ ...execute, signature }),
+      }
 
       expect(
         await testClient.getBalance({ address: receiver.address })
@@ -1127,14 +1145,16 @@ describe('plan', () => {
 
       await testClient.sendTransaction({
         account: member,
-        to: execute1.transaction.to,
-        data: execute1.transaction.data as `0x{string}`,
-        value: BigInt(execute1.transaction.value),
+        ...execute1.transaction,
       })
 
       await testClient.sendTransaction({
         account: someone,
-        ...encodeSafeTransaction(execute2),
+        to: execute2.safe,
+        data: encodeExecTransaction({
+          safeTransaction: execute2.safeTransaction,
+          signature: execute2.signature as any,
+        }),
       })
 
       expect(await testClient.getBalance({ address: safe2 })).toEqual(

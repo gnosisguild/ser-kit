@@ -1,4 +1,4 @@
-import { encodeFunctionData } from 'viem'
+import { encodeFunctionData, Hex } from 'viem'
 import { MetaTransactionRequest } from '../types'
 
 const ROLES_V1_ABI = [
@@ -71,11 +71,15 @@ const ROLES_V2_ABI = [
   },
 ] as const
 
-export const encodeExecTransactionWithRoleData = (
-  transaction: MetaTransactionRequest,
-  role: string,
+export default function encodeExecTransactionWithRole({
+  transaction,
+  role,
+  version,
+}: {
+  transaction: MetaTransactionRequest
+  role: any
   version: 1 | 2
-): `0x${string}` => {
+}): Hex {
   return version === 1
     ? encodeFunctionData({
         abi: ROLES_V1_ABI,
@@ -85,7 +89,7 @@ export const encodeExecTransactionWithRoleData = (
           BigInt(transaction.value),
           transaction.data as `0x${string}`,
           transaction.operation || 0,
-          Number(role),
+          Number(BigInt(role)),
           true,
         ],
       })
@@ -97,7 +101,7 @@ export const encodeExecTransactionWithRoleData = (
           BigInt(transaction.value),
           transaction.data as `0x${string}`,
           transaction.operation || 0,
-          role as `0x${string}`,
+          role,
           true,
         ],
       })

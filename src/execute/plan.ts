@@ -4,10 +4,32 @@ import {
   encodeFunctionData,
   getAddress,
   hashTypedData,
+  parseAbi,
   zeroAddress,
 } from 'viem'
 import { OperationType } from '@safe-global/types-kit'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
+
+import { unwrapExecuteTransaction } from './action'
+import { encodeMultiSend } from './multisend'
+import { createPreApprovedSignature } from './signatures'
+
+import { formatPrefixedAddress, splitPrefixedAddress } from '../addresses'
+import { typedDataForSafeTransaction } from '../eip712'
+
+import encodeApproveHash from '../encode/approveHash'
+import encodeExecTransactionFromModule from '../encode/execTransactionFromModule'
+import encodeExecTransactionWithRole from '../encode/execTransactionWithRole'
+import encodeExecuteNextTxData from '../encode/executeNextTx'
+
+import {
+  ExecuteTransactionAction,
+  ExecutionActionType,
+  SafeTransactionAction,
+  type ExecutionAction,
+  type ExecutionPlan,
+  type SafeTransactionProperties,
+} from './types'
 
 import {
   AccountType,
@@ -22,28 +44,6 @@ import {
   type Route,
   type Waypoint,
 } from '../types'
-
-import { createPreApprovedSignature } from './signatures'
-import { unwrapExecuteTransaction } from './action'
-import {
-  avatarAbi,
-  encodeApproveHashData,
-  encodeExecTransactionFromModuleData,
-} from './avatar'
-import { encodeExecTransactionWithRoleData } from './roles'
-import { encodeExecuteNextTxData } from './delay'
-import { encodeMultiSend } from './multisend'
-import { formatPrefixedAddress, splitPrefixedAddress } from '../addresses'
-import { typedDataForSafeTransaction } from '../eip712'
-
-import {
-  ExecuteTransactionAction,
-  ExecutionActionType,
-  SafeTransactionAction,
-  type ExecutionAction,
-  type ExecutionPlan,
-  type SafeTransactionProperties,
-} from './types'
 
 interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
@@ -208,8 +208,8 @@ const planAsSafe = async (
     })
     transaction = {
       to: right.account.address,
+      data: encodeApproveHash(hashTypedData(typedData)),
       value: 0n,
-      data: encodeApproveHashData(hashTypedData(typedData)),
     }
     result = [
       {
@@ -252,7 +252,7 @@ const planAsSafe = async (
         from: left!.account.address,
         transaction: {
           to: waypoint.account.address,
-          data: encodeExecTransactionFromModuleData(transaction),
+          data: encodeExecTransactionFromModule(transaction),
           value: 0n,
         },
       },
@@ -307,7 +307,11 @@ const planAsRoles = async (
       from: left.account.address,
       transaction: {
         to: waypoint.account.address,
-        data: encodeExecTransactionWithRoleData(transaction, role, version),
+        data: encodeExecTransactionWithRole({
+          transaction,
+          role,
+          version,
+        }),
         value: 0n,
       },
     },
@@ -337,7 +341,7 @@ const planAsDelay = async (
       from: left.account.address,
       transaction: {
         to: waypoint.account.address,
-        data: encodeExecTransactionFromModuleData(transaction),
+        data: encodeExecTransactionFromModule(transaction),
         value: 0n,
       },
     },
@@ -382,6 +386,8 @@ async function prepareSafeTransaction({
   const provider = options.providers[chainId] as Eip1193Provider
   const defaults =
     options?.safeTransactionProperties?.[formatPrefixedAddress(chainId, safe)]
+
+  const avatarAbi = parseAbi(['function nonce() view returns (uint256)'])
 
   const nonce = BigInt(
     (await provider.request({

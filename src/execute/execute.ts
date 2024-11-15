@@ -11,9 +11,10 @@ import {
 import { type Eip1193Provider } from '@safe-global/protocol-kit'
 import SafeApiKit from '@safe-global/api-kit'
 
-import { encodeSafeTransaction } from './action'
 import { chains, defaultRpc } from '../chains'
 import { typedDataForSafeTransaction } from '../eip712'
+
+import encodeExecTransaction from '../encode/execTransaction'
 
 import {
   ExecutionActionType,
@@ -83,10 +84,14 @@ export const execute = async (
           )
         }
 
-        const transaction = await encodeSafeTransaction({
-          ...action,
-          signature,
-        })
+        const transaction = {
+          to: action.safe,
+          data: encodeExecTransaction({
+            safeTransaction: action.safeTransaction,
+            signature,
+          }),
+          value: 0n,
+        }
 
         state.push(await walletClient.sendTransaction(transaction))
         break
