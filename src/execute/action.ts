@@ -1,6 +1,5 @@
 import { decodeFunctionData, encodeFunctionData, Hex, parseAbi } from 'viem'
 
-import { parsePrefixedAddress } from '../addresses'
 import {
   ExecuteTransactionAction,
   MetaTransactionRequest,
@@ -25,7 +24,7 @@ export function unwrapExecuteTransaction(
   })
 
   return {
-    to: to! as `0x{string}`,
+    to: to! as `0x${string}`,
     value: value!,
     data: data!,
     operation,
@@ -34,7 +33,7 @@ export function unwrapExecuteTransaction(
 
 export const encodeSafeTransaction = (action: SafeTransactionAction) => {
   return {
-    to: parsePrefixedAddress(action.safe),
+    to: action.safe,
     data: encodeFunctionData({
       abi: safeAbi,
       functionName: 'execTransaction',

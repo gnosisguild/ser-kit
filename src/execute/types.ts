@@ -15,9 +15,10 @@ export enum ExecutionActionType {
 /** Represents a transaction to be sent from the specified account */
 export interface ExecuteTransactionAction {
   type: ExecutionActionType.EXECUTE_TRANSACTION
-  transaction: TransactionRequest
-  from: PrefixedAddress
   chain: ChainId
+  from: Address
+
+  transaction: TransactionRequest
 }
 
 /** Represents a signature to be produced for the given message by the specified account */
@@ -45,15 +46,17 @@ export interface EIP712TypedData {
 export interface SignTypedDataAction {
   type: ExecutionActionType.SIGN_TYPED_DATA
   chain: ChainId
-  from: PrefixedAddress
+  from: Address
 
-  data: EIP712TypedData
+  typedData: EIP712TypedData
 }
 
 /** Represents an action for the given Safe transaction to be proposed for execution to the Safe Transaction Service */
 export interface ProposeTransactionAction {
   type: ExecutionActionType.PROPOSE_TRANSACTION
-  safe: PrefixedAddress
+  chain: ChainId
+  safe: Address
+
   safeTransaction: SafeTransactionRequest
 
   proposer: Address
@@ -63,9 +66,12 @@ export interface ProposeTransactionAction {
 
 export interface SafeTransactionAction {
   type: ExecutionActionType.SAFE_TRANSACTION
-  safe: PrefixedAddress
+  chain: ChainId
+  safe: Address
+
   safeTransaction: SafeTransactionRequest
 
+  proposer: Address
   /** If set to null, the previous action's output will be inserted as signature */
   signature: `0x${string}` | null
 }

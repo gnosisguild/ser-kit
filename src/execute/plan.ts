@@ -81,7 +81,7 @@ export const planExecution = async (
     options?.multiSend ? [options.multiSend] : lastRolesAccount?.multisend
   )
 
-  const [chainId] = splitPrefixedAddress(route.avatar)
+  const [chainId, avatar] = splitPrefixedAddress(route.avatar)
   if (!chainId) {
     throw new Error(
       `Invalid prefixed address for route avatar: ${route.avatar}`
@@ -92,9 +92,10 @@ export const planExecution = async (
   let result: ExecutionAction[] = [
     {
       type: ExecutionActionType.SAFE_TRANSACTION,
-
-      safe: route.avatar,
+      chain: chainId,
+      safe: avatar,
       safeTransaction: transaction as SafeTransactionRequest,
+      proposer: zeroAddress,
       signature: null,
     },
   ]
@@ -140,8 +141,8 @@ const planAsEOA = async (
       {
         type: ExecutionActionType.SIGN_TYPED_DATA,
         chain: right.account.chain,
-        from: waypoint.account.prefixedAddress,
-        data: typedData,
+        from: waypoint.account.address,
+        typedData,
       },
       request,
     ]
@@ -213,6 +214,7 @@ const planAsSafe = async (
     result = [
       {
         ...request,
+        proposer: waypoint.account.address,
         signature: createPreApprovedSignature(waypoint.account.address),
       },
     ] as ExecutionPlan
@@ -225,7 +227,8 @@ const planAsSafe = async (
         type: shouldPropose(waypoint, options)
           ? ExecutionActionType.PROPOSE_TRANSACTION
           : ExecutionActionType.SAFE_TRANSACTION,
-        safe: waypoint.account.prefixedAddress,
+        chain: waypoint.account.chain,
+        safe: waypoint.account.address,
         safeTransaction: await prepareSafeTransaction({
           chainId: waypoint.account.chain,
           safe: waypoint.account.address,
@@ -234,7 +237,7 @@ const planAsSafe = async (
         }),
 
         // to be filled upstream
-        proposer: `eoa:${zeroAddress}`,
+        proposer: zeroAddress,
         // to be filled upstream
         signature: null,
       },
@@ -245,13 +248,13 @@ const planAsSafe = async (
     return [
       {
         type: ExecutionActionType.EXECUTE_TRANSACTION,
+        chain: waypoint.account.chain,
+        from: left!.account.address,
         transaction: {
           to: waypoint.account.address,
           data: encodeExecTransactionFromModuleData(transaction),
           value: 0n,
         },
-        from: left!.account.prefixedAddress,
-        chain: waypoint.account.chain,
       },
       ...result,
     ]
@@ -301,12 +304,12 @@ const planAsRoles = async (
     {
       type: ExecutionActionType.EXECUTE_TRANSACTION,
       chain: waypoint.account.chain,
+      from: left.account.address,
       transaction: {
         to: waypoint.account.address,
         data: encodeExecTransactionWithRoleData(transaction, role, version),
         value: 0n,
       },
-      from: left.account.prefixedAddress,
     },
   ]
 }
@@ -331,22 +334,22 @@ const planAsDelay = async (
     {
       type: ExecutionActionType.EXECUTE_TRANSACTION,
       chain: waypoint.account.chain,
+      from: left.account.address,
       transaction: {
         to: waypoint.account.address,
         data: encodeExecTransactionFromModuleData(transaction),
         value: 0n,
       },
-      from: left.account.prefixedAddress,
     },
     {
       type: ExecutionActionType.EXECUTE_TRANSACTION,
       chain: waypoint.account.chain,
+      from: left.account.address,
       transaction: {
         to: waypoint.account.address,
         data: encodeExecuteNextTxData(transaction),
         value: 0n,
       },
-      from: left.account.prefixedAddress,
     },
   ]
 }

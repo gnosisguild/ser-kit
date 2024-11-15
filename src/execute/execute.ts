@@ -11,11 +11,6 @@ import {
 import { type Eip1193Provider } from '@safe-global/protocol-kit'
 import SafeApiKit from '@safe-global/api-kit'
 
-import {
-  formatPrefixedAddress,
-  parsePrefixedAddress,
-  splitPrefixedAddress,
-} from '../addresses'
 import { chains, defaultRpc } from '../chains'
 import { typedDataForSafeTransaction } from '../eip712'
 
@@ -24,7 +19,7 @@ import {
   type ExecutionPlan,
   type ExecutionState,
 } from './types'
-import type { ChainId, PrefixedAddress } from '../types'
+import type { ChainId } from '../types'
 import { encodeSafeTransaction } from './action'
 
 /**
@@ -61,9 +56,9 @@ export const execute = async (
         break
       }
       case ExecutionActionType.SIGN_TYPED_DATA: {
-        const { from, data, chain } = action
+        const { chain, from, typedData } = action
         const walletClient = getWalletClient({ chain, account: from, provider })
-        const signature = await walletClient.signTypedData(data)
+        const signature = await walletClient.signTypedData(typedData)
         state.push(signature as `0x${string}`)
         break
       }
@@ -72,10 +67,10 @@ export const execute = async (
           // message can be relayed by any account, request one
           method: 'eth_accounts',
         })) as string[]
-        const [chain] = splitPrefixedAddress(action.safe)
+
         const walletClient = getWalletClient({
-          chain: chain!,
-          account: formatPrefixedAddress(chain, relayer),
+          chain: action.chain,
+          account: relayer,
           provider,
         })
 
@@ -103,14 +98,8 @@ export const execute = async (
 
         assert(isAddress(relayer))
 
-        const { safe, safeTransaction, proposer } = action
+        const { chain, safe, safeTransaction, proposer } = action
         const previousOutput = state[i - 1]
-
-        const [chainId, safeAddress] = splitPrefixedAddress(safe)
-        if (!chainId)
-          throw new Error(
-            `Invalid prefixed address for a Safe account: ${safe}`
-          )
 
         let signature = action.signature || previousOutput
         if (!signature) {
@@ -120,12 +109,16 @@ export const execute = async (
         }
 
         const safeTxHash = hashTypedData(
-          typedDataForSafeTransaction({ chainId, safeAddress, safeTransaction })
+          typedDataForSafeTransaction({
+            chainId: chain,
+            safeAddress: safe,
+            safeTransaction,
+          })
         )
 
-        const apiKit = new SafeApiKit({ chainId: BigInt(chainId) })
+        const apiKit = new SafeApiKit({ chainId: BigInt(chain) })
         await apiKit.proposeTransaction({
-          safeAddress,
+          safeAddress: safe,
           safeTransactionData: {
             ...safeTransaction,
             // The Safe tx service requires checksummed addresses
@@ -137,7 +130,7 @@ export const execute = async (
             gasPrice: String(safeTransaction.gasPrice),
           },
           safeTxHash,
-          senderAddress: parsePrefixedAddress(proposer),
+          senderAddress: proposer,
           senderSignature: signature,
           origin,
         })
@@ -153,19 +146,16 @@ export const execute = async (
 }
 
 const _getWalletClient = ({
-  account,
   chain,
+  account,
   provider,
 }: {
-  account: PrefixedAddress
-  provider: Eip1193Provider
   chain: ChainId
+  account: Address
+  provider: Eip1193Provider
 }) => {
-  const [_chain, address] = splitPrefixedAddress(account)
-  assert(chain == _chain)
-
   return createWalletClient({
-    account: address,
+    account,
     transport: custom(provider),
     chain: chain
       ? defineChain({
@@ -179,7 +169,7 @@ const _getWalletClient = ({
 }
 
 type GetWalletClientFn = (options: {
-  account: PrefixedAddress
+  account: Address
   provider: Eip1193Provider
   chain: ChainId
 }) => ReturnType<typeof _getWalletClient>

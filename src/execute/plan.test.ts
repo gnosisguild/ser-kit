@@ -6,11 +6,7 @@ import { Eip1193Provider } from '@safe-global/protocol-kit'
 import { OperationType } from '@safe-global/types-kit'
 
 import { encodeSafeTransaction } from './action'
-import {
-  formatPrefixedAddress,
-  parsePrefixedAddress,
-  splitPrefixedAddress,
-} from '../addresses'
+import { formatPrefixedAddress } from '../addresses'
 
 import { AccountType, ConnectionType, PrefixedAddress, Route } from '../types'
 import {
@@ -154,7 +150,7 @@ describe('plan', () => {
       expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
       expect(execute.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
 
-      const signature = await signer.signTypedData(sign.data)
+      const signature = await signer.signTypedData(sign.typedData)
 
       const transaction = await encodeSafeTransaction({ ...execute, signature })
 
@@ -350,12 +346,9 @@ describe('plan', () => {
       ]
 
       expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
-      expect(splitPrefixedAddress(sign.from)).toEqual([
-        undefined,
-        getAddress(eoa.address) as any,
-      ])
+      expect(sign.from).toEqual(getAddress(eoa.address))
 
-      const signature = await eoa.signTypedData(sign.data)
+      const signature = await eoa.signTypedData(sign.typedData)
       expect(execute1.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
       expect(execute1.signature).toBe(null)
       const transaction1 = await encodeSafeTransaction({
@@ -529,12 +522,9 @@ describe('plan', () => {
       ]
 
       expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
-      expect(splitPrefixedAddress(sign.from)).toEqual([
-        undefined,
-        getAddress(eoa.address) as any,
-      ])
+      expect(sign.from).toEqual(getAddress(eoa.address))
 
-      const signature = await eoa.signTypedData(sign.data)
+      const signature = await eoa.signTypedData(sign.typedData)
       expect(execute.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
       expect(execute.signature).toBe(null)
       const transaction = await encodeSafeTransaction({ ...execute, signature })
@@ -604,7 +594,7 @@ describe('plan', () => {
 
       await execute(plan, [], testClient as Eip1193Provider, {
         getWalletClient: (({ account }: any) => {
-          if (parsePrefixedAddress(account) == getAddress(member.address)) {
+          if (getAddress(account) == getAddress(member.address)) {
             return testClientWithAccount(member)
           }
           return testClientWithAccount(deployer)
@@ -750,10 +740,9 @@ describe('plan', () => {
         // TODO set up tooling to assert on revert happening when contract invoking
         await execute(plan, state, testClient as Eip1193Provider, {
           getWalletClient: (({ account }: any) => {
-            if (parsePrefixedAddress(account) == getAddress(eoa.address)) {
-              return testClientWithAccount(eoa)
-            }
-            return testClientWithAccount(someone)
+            return getAddress(account) == getAddress(eoa.address)
+              ? testClientWithAccount(eoa)
+              : testClientWithAccount(someone)
           }) as any,
         })
       } catch (e) {}
@@ -996,7 +985,7 @@ describe('plan', () => {
       const state: any[] = []
       await execute(plan, state, testClient as Eip1193Provider, {
         getWalletClient: (({ account }: any) => {
-          if (parsePrefixedAddress(account) == getAddress(member.address)) {
+          if (getAddress(account) == getAddress(member.address)) {
             return testClientWithAccount(member)
           }
           return testClientWithAccount(someone)
