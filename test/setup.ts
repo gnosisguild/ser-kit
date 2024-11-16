@@ -1,7 +1,7 @@
 import { beforeAll } from 'bun:test'
+import { parseEther } from 'viem'
 import waitOn from 'wait-on'
 import { anvilUrl, deployer, testClient } from './client'
-import { parseEther } from 'viem'
 
 beforeAll(async () => {
   // global setup

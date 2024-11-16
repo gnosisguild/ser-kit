@@ -686,9 +686,7 @@ describe('plan', () => {
 
       await testClient.sendTransaction({
         account: member,
-        to: execute.transaction.to,
-        data: execute.transaction.data as `0x{string}`,
-        value: BigInt(execute.transaction.value),
+        ...execute.transaction,
       })
       expect(await testClient.getBalance({ address: safe })).toEqual(
         parseEther('0.877')
@@ -860,9 +858,7 @@ describe('plan', () => {
 
       await testClient.sendTransaction({
         account: eoa,
-        to: execute1.transaction.to,
-        data: execute1.transaction.data as any,
-        value: BigInt(execute1.transaction.value),
+        ...execute1.transaction,
       })
 
       await testClient.request({
@@ -879,9 +875,7 @@ describe('plan', () => {
 
       await testClient.sendTransaction({
         account: someone,
-        to: execute2.transaction.to,
-        data: execute2.transaction.data as any,
-        value: BigInt(execute2.transaction.value),
+        ...execute2.transaction,
       })
 
       expect(await testClient.getBalance({ address: safe })).toEqual(
@@ -1345,9 +1339,7 @@ describe('plan', () => {
 
       await testClient.sendTransaction({
         account: eoa,
-        to: execute1.transaction.to,
-        data: execute1.transaction.data as any,
-        value: BigInt(execute1.transaction.value),
+        ...execute1.transaction,
       })
 
       await testClient.request({
@@ -1364,9 +1356,7 @@ describe('plan', () => {
 
       await testClient.sendTransaction({
         account: someone,
-        to: execute2.transaction.to,
-        data: execute2.transaction.data as any,
-        value: BigInt(execute2.transaction.value),
+        ...execute2.transaction,
       })
 
       expect(await testClient.getBalance({ address: safe })).toEqual(

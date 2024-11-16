@@ -1,12 +1,16 @@
 import { Address, Hash } from 'viem'
+
+import { testClient } from './client'
+
+import { calculateRouteId } from '../src/query'
+import { formatPrefixedAddress } from '../src/addresses'
+
 import {
   AccountType,
   ConnectionType,
-  calculateRouteId,
-  formatPrefixedAddress,
-  type Route,
-} from '../src'
-import { testClient } from './client'
+  PrefixedAddress,
+  Route,
+} from '../src/types'
 
 /**
  * These routes exist in the mainnet snapshot and can be used for actually executing transactions.
