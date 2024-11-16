@@ -776,9 +776,8 @@ describe('plan', () => {
         await testClient.getBalance({ address: receiver.address })
       ).toEqual(0n)
 
-      await testClient.request({
-        method: 'anvil_mine' as any,
-        params: [cooldown],
+      await testClient.increaseTime({
+        seconds: cooldown * 2,
       })
 
       await execute(plan, state, testClient as Eip1193Provider, {
@@ -861,9 +860,8 @@ describe('plan', () => {
         ...execute1.transaction,
       })
 
-      await testClient.request({
-        method: 'anvil_mine' as any,
-        params: [cooldown],
+      await testClient.increaseTime({
+        seconds: cooldown * 2,
       })
 
       expect(await testClient.getBalance({ address: safe })).toEqual(
@@ -1236,9 +1234,8 @@ describe('plan', () => {
       } catch (e) {}
       expect(state).toHaveLength(1)
 
-      await testClient.request({
-        method: 'anvil_mine' as any,
-        params: [cooldown],
+      await testClient.increaseTime({
+        seconds: cooldown * 2,
       })
 
       expect(await testClient.getBalance({ address: safe })).toEqual(
@@ -1342,9 +1339,8 @@ describe('plan', () => {
         ...execute1.transaction,
       })
 
-      await testClient.request({
-        method: 'anvil_mine' as any,
-        params: [cooldown],
+      await testClient.increaseTime({
+        seconds: cooldown * 2,
       })
 
       expect(await testClient.getBalance({ address: safe })).toEqual(
