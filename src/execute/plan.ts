@@ -190,9 +190,11 @@ const planAsSafe = async (
    */
 
   // IN
-  let transaction: MetaTransactionRequest =
-    (request as ExecuteTransactionAction).transaction ||
-    (request as SafeTransactionAction).safeTransaction
+  let transaction: MetaTransactionRequest = ((
+    request as ExecuteTransactionAction
+  ).transaction ||
+    (request as SafeTransactionAction)
+      .safeTransaction) as MetaTransactionRequest
   let result = [] as ExecutionAction[]
 
   if (
