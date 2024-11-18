@@ -144,7 +144,11 @@ const planAsEOA = async (
         from: waypoint.account.address,
         typedData,
       },
-      request,
+      {
+        ...request,
+        proposer: waypoint.account.address,
+        signature: null,
+      },
     ]
   }
 
@@ -219,7 +223,7 @@ const planAsSafe = async (
         proposer: waypoint.account.address,
         signature: createPreApprovedSignature(waypoint.account.address),
       },
-    ] as ExecutionPlan
+    ]
   }
 
   // OUT
