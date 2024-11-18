@@ -36,6 +36,7 @@ import {
   eoaDelaySafe,
   eoaRolesDelaySafe,
   eoaRolesSafe,
+  eoaRolesSafeOwnsSafe,
   eoaSafe,
   eoaSafeMemberOfSafe,
   eoaSafeOwnsSafe,
@@ -921,61 +922,13 @@ describe('plan', () => {
         module: roles,
       })
 
-      const route = {
-        waypoints: [
-          {
-            account: {
-              type: AccountType.EOA,
-              prefixedAddress: `eoa:${member.address}` as PrefixedAddress,
-              address: member.address as `0x${string}`,
-            },
-          },
-          {
-            account: {
-              type: AccountType.ROLES,
-              address: roles as `0x${string}`,
-              prefixedAddress: withPrefix(roles),
-              chain: testClient.chain.id,
-              multisend: [] as `0x${string}`[],
-              version: 2,
-            },
-            connection: {
-              type: ConnectionType.IS_MEMBER,
-              roles: [roleId],
-              from: `eoa:${member.address}`,
-            },
-          },
-          {
-            account: {
-              type: AccountType.SAFE,
-              prefixedAddress: withPrefix(safe1),
-              address: safe1,
-              chain: testClient.chain.id,
-              threshold: 1,
-            },
-            connection: {
-              type: ConnectionType.IS_ENABLED,
-              from: withPrefix(roles),
-            },
-          },
-          {
-            account: {
-              type: AccountType.SAFE,
-              prefixedAddress: withPrefix(safe2),
-              address: safe2,
-              chain: testClient.chain.id,
-              threshold: 1,
-            },
-            connection: {
-              type: ConnectionType.OWNS,
-              from: withPrefix(safe1),
-            },
-          },
-        ],
-        id: 'test',
-        initiator: `eoa:${member.address}` as PrefixedAddress,
-        avatar: withPrefix(safe2),
-      } as Route
+      const route = eoaRolesSafeOwnsSafe({
+        eoa: member.address as `0x${string}`,
+        roles,
+        roleId,
+        safe1,
+        safe2,
+      })
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
@@ -1051,61 +1004,13 @@ describe('plan', () => {
         module: roles,
       })
 
-      const route = {
-        waypoints: [
-          {
-            account: {
-              type: AccountType.EOA,
-              prefixedAddress: `eoa:${member.address}` as PrefixedAddress,
-              address: member.address as `0x${string}`,
-            },
-          },
-          {
-            account: {
-              type: AccountType.ROLES,
-              address: roles as `0x${string}`,
-              prefixedAddress: withPrefix(roles),
-              chain: testClient.chain.id,
-              multisend: [] as `0x${string}`[],
-              version: 2,
-            },
-            connection: {
-              type: ConnectionType.IS_MEMBER,
-              roles: [roleId],
-              from: `eoa:${member.address}`,
-            },
-          },
-          {
-            account: {
-              type: AccountType.SAFE,
-              prefixedAddress: withPrefix(safe1),
-              address: safe1,
-              chain: testClient.chain.id,
-              threshold: 1,
-            },
-            connection: {
-              type: ConnectionType.IS_ENABLED,
-              from: withPrefix(roles),
-            },
-          },
-          {
-            account: {
-              type: AccountType.SAFE,
-              prefixedAddress: withPrefix(safe2),
-              address: safe2,
-              chain: testClient.chain.id,
-              threshold: 1,
-            },
-            connection: {
-              type: ConnectionType.OWNS,
-              from: withPrefix(safe1),
-            },
-          },
-        ],
-        id: 'test',
-        initiator: `eoa:${member.address}` as PrefixedAddress,
-        avatar: withPrefix(safe2),
-      } as Route
+      const route = eoaRolesSafeOwnsSafe({
+        eoa: member.address as `0x${string}`,
+        roles,
+        roleId,
+        safe1,
+        safe2,
+      })
 
       const transaction: MetaTransactionRequest = {
         data: '0x',

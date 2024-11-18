@@ -359,6 +359,76 @@ export function eoaRolesDelaySafe({
   }
 }
 
+export function eoaRolesSafeOwnsSafe({
+  eoa,
+  roles,
+  roleId,
+  safe1,
+  safe2,
+}: {
+  eoa: `0x${string}`
+  roles: Address
+  roleId: Hash
+  safe1: Address
+  safe2: Address
+}): Route {
+  return {
+    waypoints: [
+      {
+        account: {
+          type: AccountType.EOA,
+          prefixedAddress: `eoa:${eoa}`,
+          address: eoa as `0x${string}`,
+        },
+      },
+      {
+        account: {
+          type: AccountType.ROLES,
+          address: roles as `0x${string}`,
+          prefixedAddress: withPrefix(roles),
+          chain: testClient.chain.id,
+          multisend: [] as `0x${string}`[],
+          version: 2,
+        },
+        connection: {
+          type: ConnectionType.IS_MEMBER,
+          roles: [roleId],
+          from: `eoa:${eoa}`,
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          prefixedAddress: withPrefix(safe1),
+          address: safe1,
+          chain: testClient.chain.id,
+          threshold: 1,
+        },
+        connection: {
+          type: ConnectionType.IS_ENABLED,
+          from: withPrefix(roles),
+        },
+      },
+      {
+        account: {
+          type: AccountType.SAFE,
+          prefixedAddress: withPrefix(safe2),
+          address: safe2,
+          chain: testClient.chain.id,
+          threshold: 1,
+        },
+        connection: {
+          type: ConnectionType.OWNS,
+          from: withPrefix(safe1),
+        },
+      },
+    ],
+    id: 'test',
+    initiator: `eoa:${eoa}` as PrefixedAddress,
+    avatar: withPrefix(safe2),
+  } as Route
+}
+
 export function eoaSafeOwnsSafe({
   eoa,
   s1,
