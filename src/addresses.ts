@@ -1,10 +1,10 @@
-import { getAddress } from 'viem'
+import { Address, getAddress } from 'viem'
 import { chains } from './chains'
 import type { ChainId, PrefixedAddress } from './types'
 
 export const formatPrefixedAddress = (
   chainId: ChainId | undefined,
-  address: `0x${string}`
+  address: Address
 ) => {
   const chain = chainId && chains.find((chain) => chain.chainId === chainId)
 
@@ -13,10 +13,10 @@ export const formatPrefixedAddress = (
   }
 
   const prefix = chain ? chain.shortName : 'eoa'
-  return `${prefix}:${address.toLowerCase()}` as PrefixedAddress
+  return `${prefix}:${getAddress(address)}` as PrefixedAddress
 }
 
-export const parsePrefixedAddress = (prefixedAddress: PrefixedAddress) => {
+export const splitPrefixedAddress = (prefixedAddress: PrefixedAddress) => {
   const [prefix, address] = prefixedAddress.split(':')
   const chain =
     prefix !== 'eoa'
@@ -27,4 +27,11 @@ export const parsePrefixedAddress = (prefixedAddress: PrefixedAddress) => {
   }
   const checksummedAddress = getAddress(address) as `0x${string}`
   return [chain?.chainId, checksummedAddress] as const
+}
+
+export const parsePrefixedAddress = (
+  prefixedAddress: PrefixedAddress | Address
+) => {
+  const [, address] = prefixedAddress.split(':')
+  return getAddress(address) as `0x${string}`
 }

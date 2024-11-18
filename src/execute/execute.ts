@@ -1,23 +1,27 @@
-import { createWalletClient, custom, defineChain, getAddress } from 'viem'
+import assert from 'assert'
 import {
-  buildSignatureBytes,
-  EthSafeSignature,
-  SigningMethod,
-  type Eip1193Provider,
-} from '@safe-global/protocol-kit'
-import EthSafeTransaction from '@safe-global/protocol-kit/dist/src/utils/transactions/SafeTransaction'
+  Address,
+  createWalletClient,
+  custom,
+  defineChain,
+  getAddress,
+  hashTypedData,
+  isAddress,
+} from 'viem'
+import { type Eip1193Provider } from '@safe-global/protocol-kit'
 import SafeApiKit from '@safe-global/api-kit'
+
+import { chains, defaultRpc } from '../chains'
+import { typedDataForSafeTransaction } from '../eip712'
+
+import encodeExecTransaction from '../encode/execTransaction'
 
 import {
   ExecutionActionType,
   type ExecutionPlan,
   type ExecutionState,
 } from './types'
-import { parsePrefixedAddress } from '../addresses'
-import type { ChainId, PrefixedAddress } from '../types'
-import { chains, defaultRpc } from '../chains'
-import { initProtocolKit } from './safe'
-import { adjustVInSignature } from '@safe-global/protocol-kit/dist/src/utils'
+import type { ChainId } from '../types'
 
 /**
  * Executes the given plan, continuing from the given state. Mutates the state array to track execution progress.
@@ -29,7 +33,13 @@ export const execute = async (
   plan: ExecutionPlan,
   state: ExecutionState = [],
   provider: Eip1193Provider,
-  { origin }: { origin?: string } = {}
+  {
+    origin,
+    getWalletClient = _getWalletClient,
+  }: {
+    origin?: string
+    getWalletClient?: GetWalletClientFn
+  } = {}
 ) => {
   for (let i = state.length; i < plan.length; i++) {
     const action = plan[i]
@@ -37,62 +47,65 @@ export const execute = async (
     switch (action.type) {
       case ExecutionActionType.EXECUTE_TRANSACTION: {
         const { from, chain } = action
-        const walletClient = getWalletClient({ account: from, chain, provider })
+        const walletClient = getWalletClient({
+          chain,
+          account: from,
+          provider,
+        })
 
-        state.push(
-          await walletClient.sendTransaction({
-            to: action.transaction.to as `0x${string}`,
-            value: BigInt(action.transaction.value),
-            data: action.transaction.data as `0x${string}`,
-          })
-        )
-        break
-      }
-      case ExecutionActionType.SIGN_MESSAGE: {
-        const { from, message } = action
-        const [, signerAddress] = parsePrefixedAddress(from)
-        const walletClient = getWalletClient({ account: from, provider })
-        const signature = await walletClient.signMessage({ message })
-        state.push(
-          adjustVInSignature(
-            SigningMethod.ETH_SIGN,
-            signature,
-            message,
-            signerAddress
-          ) as `0x${string}`
-        )
+        state.push(await walletClient.sendTransaction(action.transaction))
         break
       }
       case ExecutionActionType.SIGN_TYPED_DATA: {
-        const { from, data } = action
-        const walletClient = getWalletClient({ account: from, provider })
-        const signature = await walletClient.signTypedData(data)
-        state.push(
-          adjustVInSignature(
-            SigningMethod.ETH_SIGN_TYPED_DATA,
-            signature
-          ) as `0x${string}`
-        )
+        const { chain, from, typedData } = action
+        const walletClient = getWalletClient({ chain, account: from, provider })
+        const signature = await walletClient.signTypedData(typedData)
+        state.push(signature as `0x${string}`)
         break
       }
-      case ExecutionActionType.PROPOSE_SAFE_TRANSACTION: {
-        const { safe, safeTransaction: safeTransactionData, from } = action
+      case ExecutionActionType.SAFE_TRANSACTION: {
+        const [relayer] = (await provider.request({
+          // message can be relayed by any account, request one
+          method: 'eth_accounts',
+        })) as string[]
+
+        const walletClient = getWalletClient({
+          chain: action.chain,
+          account: relayer,
+          provider,
+        })
+
         const previousOutput = state[i - 1]
 
-        const [chainId, safeAddress] = parsePrefixedAddress(safe)
-        if (!chainId)
+        const signature = action.signature || previousOutput
+        if (!signature) {
           throw new Error(
-            `Invalid prefixed address for a Safe account: ${safe}`
-          )
-
-        const [ownerChainId, ownerAddress] = parsePrefixedAddress(from)
-        const isContractSignature = ownerChainId !== undefined
-
-        if (action.signature && previousOutput) {
-          console.warn(
-            '`PROPOSE_SAFE_TRANSACTION` action already has a signature, ignoring previous action output'
+            'Signature is required for running a Safe transaction'
           )
         }
+
+        const transaction = {
+          to: action.safe,
+          data: encodeExecTransaction({
+            safeTransaction: action.safeTransaction,
+            signature,
+          }),
+          value: 0n,
+        }
+
+        state.push(await walletClient.sendTransaction(transaction))
+        break
+      }
+      case ExecutionActionType.PROPOSE_TRANSACTION: {
+        const [relayer] = (await provider.request({
+          method: 'eth_accounts',
+        })) as string[]
+
+        assert(isAddress(relayer))
+
+        const { chain, safe, safeTransaction, proposer } = action
+        const previousOutput = state[i - 1]
+
         let signature = action.signature || previousOutput
         if (!signature) {
           throw new Error(
@@ -100,56 +113,54 @@ export const execute = async (
           )
         }
 
-        const protocolKit = await initProtocolKit(safe)
-        const safeTransaction = new EthSafeTransaction(safeTransactionData)
-        const safeTxHash = await protocolKit.getTransactionHash(safeTransaction)
-
-        const safeSignature = new EthSafeSignature(
-          ownerAddress,
-          previousOutput,
-          isContractSignature
+        const safeTxHash = hashTypedData(
+          typedDataForSafeTransaction({
+            chainId: chain,
+            safeAddress: safe,
+            safeTransaction,
+          })
         )
-        safeTransaction.addSignature(safeSignature)
 
-        const apiKit = new SafeApiKit({ chainId: BigInt(chainId) })
+        const apiKit = new SafeApiKit({ chainId: BigInt(chain) })
         await apiKit.proposeTransaction({
-          safeAddress,
+          safeAddress: safe,
           safeTransactionData: {
-            ...safeTransaction.data,
+            ...safeTransaction,
             // The Safe tx service requires checksummed addresses
-            to: getAddress(safeTransaction.data.to),
+            to: getAddress(safeTransaction.to) as `0x${string}`,
             // The Safe tx service requires decimal values
-            value: BigInt(safeTransaction.data.value).toString(10),
+            value: safeTransaction.value.toString(10),
+            safeTxGas: String(safeTransaction.safeTxGas),
+            baseGas: String(safeTransaction.baseGas),
+            gasPrice: String(safeTransaction.gasPrice),
           },
           safeTxHash,
-          senderAddress: ownerAddress,
-          senderSignature: safeSignature.data,
+          senderAddress: proposer,
+          senderSignature: signature,
           origin,
         })
 
         state.push(safeTxHash as `0x${string}`)
         break
       }
+      default: {
+        throw new Error('Not yet implemented or required')
+      }
     }
   }
 }
 
-const getWalletClient = ({
-  account,
+const _getWalletClient = ({
   chain,
+  account,
   provider,
 }: {
-  account: PrefixedAddress
+  chain: ChainId
+  account: Address
   provider: Eip1193Provider
-  chain?: ChainId
 }) => {
-  const [chainId, address] = parsePrefixedAddress(account)
-  if (chain && chainId && chainId !== chain) {
-    throw new Error(`Chain mismatch: Needs account on ${chain}, got ${chainId}`)
-  }
-
   return createWalletClient({
-    account: address,
+    account,
     transport: custom(provider),
     chain: chain
       ? defineChain({
@@ -161,3 +172,9 @@ const getWalletClient = ({
       : undefined,
   })
 }
+
+type GetWalletClientFn = (options: {
+  account: Address
+  provider: Eip1193Provider
+  chain: ChainId
+}) => ReturnType<typeof _getWalletClient>

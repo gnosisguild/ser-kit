@@ -1,32 +1,32 @@
-import type {
-  MetaTransactionData,
-  SafeSignature,
-  SafeTransactionData,
-} from '@safe-global/safe-core-sdk-types'
-import type { ChainId, PrefixedAddress } from '../types'
+import type { Address, TransactionRequest, TypedDataDomain } from 'viem'
 import type { SafeTransactionOptionalProps } from '@safe-global/protocol-kit'
-import type { TypedDataDomain } from 'viem'
+
+import type { ChainId, PrefixedAddress, SafeTransactionRequest } from '../types'
 
 export enum ExecutionActionType {
   EXECUTE_TRANSACTION = 'EXECUTE_TRANSACTION',
+  SAFE_TRANSACTION = 'SAFE_TRANSACTION',
+  PROPOSE_TRANSACTION = 'PROPOSE_TRANSACTION',
   SIGN_MESSAGE = 'SIGN_MESSAGE',
   SIGN_TYPED_DATA = 'SIGN_TYPED_DATA',
-  PROPOSE_SAFE_TRANSACTION = 'PROPOSE_SAFE_TRANSACTION',
 }
 
 /** Represents a transaction to be sent from the specified account */
 export interface ExecuteTransactionAction {
   type: ExecutionActionType.EXECUTE_TRANSACTION
-  transaction: MetaTransactionData
-  from: PrefixedAddress
   chain: ChainId
+  from: Address
+
+  transaction: TransactionRequest
 }
 
 /** Represents a signature to be produced for the given message by the specified account */
 export interface SignMessageAction {
   type: ExecutionActionType.SIGN_MESSAGE
-  message: string
+  chain: ChainId
   from: PrefixedAddress
+
+  message: string
 }
 
 interface TypedDataField {
@@ -44,25 +44,43 @@ export interface EIP712TypedData {
 /** Represents a signature to be produced for the given typed data object by the specified account */
 export interface SignTypedDataAction {
   type: ExecutionActionType.SIGN_TYPED_DATA
-  data: EIP712TypedData
-  from: PrefixedAddress
+  chain: ChainId
+  from: Address
+
+  typedData: EIP712TypedData
 }
 
 /** Represents an action for the given Safe transaction to be proposed for execution to the Safe Transaction Service */
-export interface ProposeSafeTransactionAction {
-  type: ExecutionActionType.PROPOSE_SAFE_TRANSACTION
-  safe: PrefixedAddress
-  safeTransaction: SafeTransactionData
+export interface ProposeTransactionAction {
+  type: ExecutionActionType.PROPOSE_TRANSACTION
+  chain: ChainId
+  safe: Address
+
+  safeTransaction: SafeTransactionRequest
+
+  proposer: Address
   /** If set to null, the previous action's output will be inserted as signature */
   signature: `0x${string}` | null
-  from: PrefixedAddress
+}
+
+export interface SafeTransactionAction {
+  type: ExecutionActionType.SAFE_TRANSACTION
+  chain: ChainId
+  safe: Address
+
+  safeTransaction: SafeTransactionRequest
+
+  proposer: Address
+  /** If set to null, the previous action's output will be inserted as signature */
+  signature: `0x${string}` | null
 }
 
 export type ExecutionAction =
   | ExecuteTransactionAction
+  | SafeTransactionAction
+  | ProposeTransactionAction
   | SignMessageAction
   | SignTypedDataAction
-  | ProposeSafeTransactionAction
 
 /**
  * An execution plan describes the actions that need to happen to get a given transaction executed through a given route.
@@ -82,8 +100,14 @@ export type ExecutionState = `0x${string}`[]
 
 export interface SafeTransactionProperties
   extends SafeTransactionOptionalProps {
-  /** If a Safe transaction is executable, only approve/propose the transaction, but don't execute it. Anyone will be able to trigger execution. */
+  /**
+   * If a Safe transaction is executable, only approve/propose the transaction,
+   * but don't execute it. Anyone will be able to trigger execution.
+   **/
   proposeOnly?: boolean
-  /** In case the Safe signature can be submitted off-chain, still approve the signature on-chain */
+  /**
+   * In case the Safe signature can be submitted off-chain, still approve it
+   * on-chain
+   **/
   onchainSignature?: boolean
 }
