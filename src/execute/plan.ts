@@ -70,7 +70,7 @@ interface Options {
 export const planExecution = async (
   transactions: readonly MetaTransactionRequest[],
   route: Route,
-  options: Options
+  options: Options = {}
 ): Promise<ExecutionPlan> => {
   // encode batch using the appropriate multiSend contract address
   const lastRolesAccount = route.waypoints.findLast(

@@ -6,11 +6,12 @@
   "homepage": "https://github.com/gnosisguild/ser-kit",
   "packageManager": "bun@1.1.12",
   "main": "dist/index.js",
+  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
-  ".": {
+  "exports": {
+    "types": "./dist/index.d.ts",
     "import": "./dist/index.mjs",
-    "require": "./dist/index.js",
-    "default": "./dist/index.js"
+    "require": "./dist/index.js"
   },
   "files": [
     "dist",
