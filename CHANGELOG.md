@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/gnosisguild/ser-kit/compare/v1.0.2...v1.0.3) (2024-12-11)
+
+
+### Bug Fixes
+
+* parsePrefixedAddress handles prefixed addresses and regular ones ([#10](https://github.com/gnosisguild/ser-kit/issues/10)) ([2ba9351](https://github.com/gnosisguild/ser-kit/commit/2ba93514e3572270d5458bda537078d5988cdf33))
+
 ## [1.0.2](https://github.com/gnosisguild/ser-kit/compare/v1.0.1...v1.0.2) (2024-12-11)
 
 
