@@ -32,6 +32,10 @@ export const splitPrefixedAddress = (prefixedAddress: PrefixedAddress) => {
 export const parsePrefixedAddress = (
   prefixedAddress: PrefixedAddress | Address
 ) => {
+  if (!prefixedAddress.includes(':')) {
+    return getAddress(prefixedAddress) as `0x${string}`
+  }
+
   const [, address] = prefixedAddress.split(':')
   return getAddress(address) as `0x${string}`
 }
