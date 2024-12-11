@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/gnosisguild/ser-kit/compare/v1.0.1...v1.0.2) (2024-12-11)
+
+
+### Bug Fixes
+
+* export enums not only as types ([#8](https://github.com/gnosisguild/ser-kit/issues/8)) ([e0b248d](https://github.com/gnosisguild/ser-kit/commit/e0b248d0141bf4cae20f0b3e540b7a1c3e98709f))
+
 ## [1.0.1](https://github.com/gnosisguild/ser-kit/compare/v1.0.0...v1.0.1) (2024-12-11)
 
 
