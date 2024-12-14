@@ -1,20 +1,12 @@
 import assert from 'assert'
-import {
-  Address,
-  decodeFunctionData,
-  encodeFunctionData,
-  getAddress,
-  hashTypedData,
-  parseAbi,
-  zeroAddress,
-} from 'viem'
-import { OperationType } from '@safe-global/types-kit'
+import { decodeFunctionData, hashTypedData, parseAbi, zeroAddress } from 'viem'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 
-import { encodeMultiSend } from './multisend'
 import { createPreApprovedSignature } from './signatures'
+import { encodeMultiSend } from './multisend'
+import { prepareSafeTransaction } from './safeTransaction'
 
-import { formatPrefixedAddress, splitPrefixedAddress } from '../addresses'
+import { splitPrefixedAddress } from '../addresses'
 import { typedDataForSafeTransaction } from '../eip712'
 
 import encodeApproveHash from '../encode/approveHash'
@@ -372,59 +364,6 @@ function shouldPropose(waypoint: Waypoint | StartingPoint, options?: Options) {
   const proposeOnly = !!safeTransactionProperties?.proposeOnly
   const canExecute = waypoint.account.threshold === 1
   return proposeOnly || !canExecute
-}
-
-async function prepareSafeTransaction({
-  chainId,
-  safe,
-  transaction,
-  options,
-}: {
-  chainId: ChainId
-  safe: Address
-  transaction: MetaTransactionRequest
-  options: Options
-}): Promise<SafeTransactionRequest> {
-  if (!options.providers || !options.providers[chainId]) {
-    throw new Error('Provider is required')
-  }
-
-  const provider = options.providers[chainId] as Eip1193Provider
-  const defaults =
-    options?.safeTransactionProperties?.[formatPrefixedAddress(chainId, safe)]
-
-  const avatarAbi = parseAbi(['function nonce() view returns (uint256)'])
-
-  const nonce = BigInt(
-    (await provider.request({
-      method: 'eth_call',
-      params: [
-        {
-          to: safe,
-          data: encodeFunctionData({
-            abi: avatarAbi,
-            functionName: 'nonce',
-            args: [],
-          }),
-        },
-      ],
-    })) as string
-  )
-
-  return {
-    to: transaction.to,
-    value: transaction.value,
-    data: transaction.data,
-    operation: transaction.operation ?? OperationType.Call,
-    safeTxGas: BigInt(defaults?.safeTxGas || 0),
-    baseGas: BigInt(defaults?.baseGas || 0),
-    gasPrice: BigInt(defaults?.gasPrice || 0),
-    gasToken: getAddress(defaults?.gasToken || zeroAddress) as `0x${string}`,
-    refundReceiver: getAddress(
-      defaults?.refundReceiver || zeroAddress
-    ) as `0x${string}`,
-    nonce: Number(defaults?.nonce || nonce),
-  }
 }
 
 function unwrapExecuteTransaction(
