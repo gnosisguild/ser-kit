@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4](https://github.com/gnosisguild/ser-kit/compare/v1.0.3...v1.0.4) (2024-12-14)
+
+
+### Bug Fixes
+
+* error when not supplying a provider ([#13](https://github.com/gnosisguild/ser-kit/issues/13)) ([80ccfe1](https://github.com/gnosisguild/ser-kit/commit/80ccfe144eb8504151b13125ec948fc9f9f624f8))
+
 ## [1.0.3](https://github.com/gnosisguild/ser-kit/compare/v1.0.2...v1.0.3) (2024-12-11)
 
 
