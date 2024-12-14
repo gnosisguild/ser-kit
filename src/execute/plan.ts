@@ -1,23 +1,11 @@
 import assert from 'assert'
-import {
-  Address,
-  Chain,
-  createPublicClient,
-  decodeFunctionData,
-  encodeFunctionData,
-  getAddress,
-  hashTypedData,
-  http,
-  parseAbi,
-  zeroAddress,
-} from 'viem'
-import { OperationType } from '@safe-global/types-kit'
+import { decodeFunctionData, hashTypedData, parseAbi, zeroAddress } from 'viem'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 
 import { encodeMultiSend } from './multisend'
 import { createPreApprovedSignature } from './signatures'
 
-import { formatPrefixedAddress, splitPrefixedAddress } from '../addresses'
+import { splitPrefixedAddress } from '../addresses'
 import { typedDataForSafeTransaction } from '../eip712'
 
 import encodeApproveHash from '../encode/approveHash'
@@ -47,16 +35,7 @@ import {
   type Route,
   type Waypoint,
 } from '../types'
-import {
-  arbitrum,
-  avalanche,
-  base,
-  gnosis,
-  mainnet,
-  polygon,
-  sepolia,
-} from 'viem/chains'
-import { defaultRpc } from '../chains'
+import prepareSafeTransaction from './prepareSafeTransaction'
 
 interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
@@ -387,55 +366,6 @@ function shouldPropose(waypoint: Waypoint | StartingPoint, options?: Options) {
   return proposeOnly || !canExecute
 }
 
-async function prepareSafeTransaction({
-  chainId,
-  safe,
-  transaction,
-  options,
-}: {
-  chainId: ChainId
-  safe: Address
-  transaction: MetaTransactionRequest
-  options?: Options
-}): Promise<SafeTransactionRequest> {
-  const provider = eip1193Provider({ chainId, options })
-  const defaults =
-    options?.safeTransactionProperties?.[formatPrefixedAddress(chainId, safe)]
-
-  const avatarAbi = parseAbi(['function nonce() view returns (uint256)'])
-
-  const nonce = BigInt(
-    (await provider.request({
-      method: 'eth_call',
-      params: [
-        {
-          to: safe,
-          data: encodeFunctionData({
-            abi: avatarAbi,
-            functionName: 'nonce',
-            args: [],
-          }),
-        },
-      ],
-    })) as string
-  )
-
-  return {
-    to: transaction.to,
-    value: transaction.value,
-    data: transaction.data,
-    operation: transaction.operation ?? OperationType.Call,
-    safeTxGas: BigInt(defaults?.safeTxGas || 0),
-    baseGas: BigInt(defaults?.baseGas || 0),
-    gasPrice: BigInt(defaults?.gasPrice || 0),
-    gasToken: getAddress(defaults?.gasToken || zeroAddress) as `0x${string}`,
-    refundReceiver: getAddress(
-      defaults?.refundReceiver || zeroAddress
-    ) as `0x${string}`,
-    nonce: Number(defaults?.nonce || nonce),
-  }
-}
-
 function unwrapExecuteTransaction(
   action: ExecuteTransactionAction
 ): MetaTransactionRequest {
@@ -488,48 +418,5 @@ function pointers(waypoints: Route['waypoints'], index: number) {
     waypoint: StartingPoint | Waypoint
     left: StartingPoint | Waypoint | null
     right: Waypoint | null
-  }
-}
-
-function eip1193Provider({
-  chainId,
-  options,
-}: {
-  chainId: ChainId
-  options?: Options
-}): Eip1193Provider {
-  const chains: Record<ChainId, Chain> = {
-    1: mainnet,
-    10: sepolia,
-    100: gnosis,
-    137: polygon,
-    8453: base,
-    42161: arbitrum,
-    43114: avalanche,
-    11155111: sepolia,
-  }
-
-  if (!chains[chainId]) {
-    throw new Error(`Unsupported chain ID: ${chainId}`)
-  }
-
-  const passedIn = Boolean(
-    options && options.providers && options.providers[chainId]
-  )
-
-  let urlOrProvider
-  if (passedIn) {
-    urlOrProvider = options!.providers![chainId]!
-  } else {
-    urlOrProvider = defaultRpc[chainId]!
-  }
-
-  if (typeof urlOrProvider == 'string') {
-    return createPublicClient({
-      chain: chains[chainId]!,
-      transport: http(urlOrProvider),
-    }) as Eip1193Provider
-  } else {
-    return urlOrProvider
   }
 }
