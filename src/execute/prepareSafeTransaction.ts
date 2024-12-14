@@ -60,6 +60,7 @@ export default async function prepareSafeTransaction({
             args: [],
           }),
         },
+        'latest',
       ],
     })) as string
   )
