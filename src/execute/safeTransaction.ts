@@ -81,7 +81,7 @@ export async function prepareSafeTransaction({
   }
 }
 
-export function getEip1193Provider({
+function getEip1193Provider({
   chainId,
   options,
 }: {
