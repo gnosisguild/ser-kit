@@ -2,8 +2,9 @@ import assert from 'assert'
 import { decodeFunctionData, hashTypedData, parseAbi, zeroAddress } from 'viem'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 
-import { encodeMultiSend } from './multisend'
 import { createPreApprovedSignature } from './signatures'
+import { encodeMultiSend } from './multisend'
+import { prepareSafeTransaction } from './safeTransaction'
 
 import { splitPrefixedAddress } from '../addresses'
 import { typedDataForSafeTransaction } from '../eip712'
@@ -35,7 +36,6 @@ import {
   type Route,
   type Waypoint,
 } from '../types'
-import prepareSafeTransaction from './prepareSafeTransaction'
 
 interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */

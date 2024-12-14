@@ -31,7 +31,7 @@ interface Options {
   }
 }
 
-export default async function prepareSafeTransaction({
+export async function prepareSafeTransaction({
   chainId,
   safe,
   transaction,
