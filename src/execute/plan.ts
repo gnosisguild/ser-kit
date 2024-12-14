@@ -1,10 +1,13 @@
 import assert from 'assert'
 import {
   Address,
+  Chain,
+  createPublicClient,
   decodeFunctionData,
   encodeFunctionData,
   getAddress,
   hashTypedData,
+  http,
   parseAbi,
   zeroAddress,
 } from 'viem'
@@ -44,6 +47,16 @@ import {
   type Route,
   type Waypoint,
 } from '../types'
+import {
+  arbitrum,
+  avalanche,
+  base,
+  gnosis,
+  mainnet,
+  polygon,
+  sepolia,
+} from 'viem/chains'
+import { defaultRpc } from '../chains'
 
 interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
@@ -383,13 +396,9 @@ async function prepareSafeTransaction({
   chainId: ChainId
   safe: Address
   transaction: MetaTransactionRequest
-  options: Options
+  options?: Options
 }): Promise<SafeTransactionRequest> {
-  if (!options.providers || !options.providers[chainId]) {
-    throw new Error('Provider is required')
-  }
-
-  const provider = options.providers[chainId] as Eip1193Provider
+  const provider = eip1193Provider({ chainId, options })
   const defaults =
     options?.safeTransactionProperties?.[formatPrefixedAddress(chainId, safe)]
 
@@ -479,5 +488,48 @@ function pointers(waypoints: Route['waypoints'], index: number) {
     waypoint: StartingPoint | Waypoint
     left: StartingPoint | Waypoint | null
     right: Waypoint | null
+  }
+}
+
+function eip1193Provider({
+  chainId,
+  options,
+}: {
+  chainId: ChainId
+  options?: Options
+}): Eip1193Provider {
+  const chains: Record<ChainId, Chain> = {
+    1: mainnet,
+    10: sepolia,
+    100: gnosis,
+    137: polygon,
+    8453: base,
+    42161: arbitrum,
+    43114: avalanche,
+    11155111: sepolia,
+  }
+
+  if (!chains[chainId]) {
+    throw new Error(`Unsupported chain ID: ${chainId}`)
+  }
+
+  const passedIn = Boolean(
+    options && options.providers && options.providers[chainId]
+  )
+
+  let urlOrProvider
+  if (passedIn) {
+    urlOrProvider = options!.providers![chainId]!
+  } else {
+    urlOrProvider = defaultRpc[chainId]!
+  }
+
+  if (typeof urlOrProvider == 'string') {
+    return createPublicClient({
+      chain: chains[chainId]!,
+      transport: http(urlOrProvider),
+    }) as Eip1193Provider
+  } else {
+    return urlOrProvider
   }
 }
