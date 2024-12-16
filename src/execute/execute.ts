@@ -124,7 +124,7 @@ export const execute = async (
 
         const apiKit = initApiKit(chain)
         await apiKit.proposeTransaction({
-          safeAddress: safe,
+          safeAddress: getAddress(safe),
           safeTransactionData: {
             ...safeTransaction,
             // The Safe tx service requires checksummed addresses
@@ -136,7 +136,7 @@ export const execute = async (
             gasPrice: String(safeTransaction.gasPrice),
           },
           safeTxHash,
-          senderAddress: proposer,
+          senderAddress: getAddress(proposer),
           senderSignature: signature,
           origin,
         })
