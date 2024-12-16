@@ -38,9 +38,9 @@ const state = [] // mutable execution state
 const result = execute(actions, state, provider)
 ```
 
-ser-kit uses two phases, planning and execution. Planning yields a sequence of action (see `ExecutionAction` type).
-This indirection allows giving users a sense all steps required for execution before prompting for the first signature.
-It also allows customization of indi
+ser-kit uses two phases, planning and execution. Planning yields a sequence of actions (see `ExecutionAction` type).
+This indirection allows giving users a sense of all steps required for execution before prompting for the first signature.
+It also allows customization of individual execution steps, for example for setting the gas price or using a specific transaction nonce.
 
 The `execute` function sequentially executes the actions using the given provider.
 It updates the given state array in place, so that the outcome of the action at index `i` is written at `state[i]`.
