@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.5](https://github.com/gnosisguild/ser-kit/compare/v1.0.4...v1.0.5) (2024-12-16)
+
+
+### Bug Fixes
+
+* work around cjs interop quirks of api-kit ([#16](https://github.com/gnosisguild/ser-kit/issues/16)) ([3d7a898](https://github.com/gnosisguild/ser-kit/commit/3d7a898e20acbf41af261374cb61aca0f04724d4))
+
 ## [1.0.4](https://github.com/gnosisguild/ser-kit/compare/v1.0.3...v1.0.4) (2024-12-14)
 
 
