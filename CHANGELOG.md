@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.6](https://github.com/gnosisguild/ser-kit/compare/v1.0.5...v1.0.6) (2024-12-16)
+
+
+### Bug Fixes
+
+* TxService Checksum ([#18](https://github.com/gnosisguild/ser-kit/issues/18)) ([e58d0f7](https://github.com/gnosisguild/ser-kit/commit/e58d0f73e30248af35bbf6cfd14587a901b2ecb9))
+
 ## [1.0.5](https://github.com/gnosisguild/ser-kit/compare/v1.0.4...v1.0.5) (2024-12-16)
 
 
