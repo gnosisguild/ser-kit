@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.7](https://github.com/gnosisguild/ser-kit/compare/v1.0.6...v1.0.7) (2024-12-20)
+
+
+### Bug Fixes
+
+* Safe as Initiator ([#22](https://github.com/gnosisguild/ser-kit/issues/22)) ([f37793b](https://github.com/gnosisguild/ser-kit/commit/f37793bbe0dfe1bd4a696fc7e433f3570f012eab))
+
 ## [1.0.6](https://github.com/gnosisguild/ser-kit/compare/v1.0.5...v1.0.6) (2024-12-16)
 
 
