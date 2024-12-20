@@ -153,14 +153,16 @@ const planAsSafe = async (
   index: number,
   options: Options
 ): Promise<ExecutionAction[]> => {
-  const { waypoint, left, right } = pointers(waypoints, index)
+  const { waypoint, connection, left, right } = pointers(waypoints, index)
+
   assert(waypoint.account.type == AccountType.SAFE)
 
-  assert(
-    'connection' in waypoint &&
-      (waypoint.connection.type == ConnectionType.IS_ENABLED ||
-        waypoint.connection.type == ConnectionType.OWNS)
-  )
+  if (left !== null) {
+    assert(
+      connection?.type == ConnectionType.IS_ENABLED ||
+        connection?.type == ConnectionType.OWNS
+    )
+  }
 
   assert(
     request.type == ExecutionActionType.SAFE_TRANSACTION ||
@@ -219,7 +221,11 @@ const planAsSafe = async (
   }
 
   // OUT
-  if (waypoint.connection.type == ConnectionType.OWNS) {
+  const isInitiator = left == null
+  const isUpstreamOwner = connection?.type == ConnectionType.OWNS
+  const isUpstreamModule = connection?.type == ConnectionType.IS_ENABLED
+
+  if (isUpstreamOwner) {
     return [
       {
         type: shouldPropose(waypoint, options)
@@ -241,8 +247,7 @@ const planAsSafe = async (
       },
       ...result,
     ]
-  } else {
-    assert(waypoint.connection.type == ConnectionType.IS_ENABLED)
+  } else if (isUpstreamModule) {
     return [
       {
         type: ExecutionActionType.EXECUTE_TRANSACTION,
@@ -253,6 +258,17 @@ const planAsSafe = async (
           data: encodeExecTransactionFromModule(transaction),
           value: 0n,
         },
+      },
+      ...result,
+    ]
+  } else {
+    assert(isInitiator)
+    return [
+      {
+        type: ExecutionActionType.EXECUTE_TRANSACTION,
+        chain: waypoint.account.chain,
+        from: waypoint.account.address,
+        transaction,
       },
       ...result,
     ]
@@ -397,7 +413,7 @@ function pointers(waypoints: Route['waypoints'], index: number) {
   if (left) {
     assert(
       'connection' in waypoint &&
-        waypoint.connection.from == left?.account.prefixedAddress
+        waypoint.connection.from == left.account.prefixedAddress
     )
   }
 
@@ -414,9 +430,11 @@ function pointers(waypoints: Route['waypoints'], index: number) {
     waypoint,
     left,
     right,
+    connection: left ? (waypoint as Waypoint).connection! : null,
   } as {
     waypoint: StartingPoint | Waypoint
     left: StartingPoint | Waypoint | null
     right: Waypoint | null
+    connection: Connection | null
   }
 }
