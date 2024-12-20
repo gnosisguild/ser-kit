@@ -7,13 +7,7 @@ import { OperationType } from '@safe-global/types-kit'
 
 import { formatPrefixedAddress } from '../addresses'
 
-import {
-  AccountType,
-  ConnectionType,
-  MetaTransactionRequest,
-  PrefixedAddress,
-  Route,
-} from '../types'
+import { MetaTransactionRequest } from '../types'
 import {
   ExecutionActionType,
   ExecuteTransactionAction,
