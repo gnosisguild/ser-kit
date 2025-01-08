@@ -1,6 +1,6 @@
-import { Address, encodeFunctionData, parseAbi } from 'viem'
+import { encodeFunctionData, getAddress, parseAbi } from 'viem'
 
-import { splitPrefixedAddress, validatePrefixedAddress } from '../addresses'
+import { formatPrefixedAddress, splitPrefixedAddress } from '../addresses'
 
 import {
   Account,
@@ -55,7 +55,7 @@ async function normalizeAccount(
 ): Promise<Account> {
   account = {
     ...account,
-    address: normalizeAddress(account.address),
+    address: getAddress(account.address),
     prefixedAddress: normalizePrefixedAddress(account.prefixedAddress),
   }
 
@@ -76,14 +76,11 @@ function normalizeConnection(connection: Connection): Connection {
   }
 }
 
-function normalizeAddress(address: Address): Address {
-  validatePrefixedAddress(address)
-  return address.toLowerCase() as Address
-}
-
-function normalizePrefixedAddress(address: PrefixedAddress): PrefixedAddress {
-  validatePrefixedAddress(address)
-  return address.toLowerCase() as PrefixedAddress
+function normalizePrefixedAddress(
+  prefixedAddress: PrefixedAddress
+): PrefixedAddress {
+  const [chainId, address] = splitPrefixedAddress(prefixedAddress)
+  return formatPrefixedAddress(chainId, address)
 }
 
 async function fetchThreshold(

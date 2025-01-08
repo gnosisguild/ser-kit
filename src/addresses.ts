@@ -19,13 +19,20 @@ export const formatPrefixedAddress = (
 export const splitPrefixedAddress = (
   prefixedAddress: PrefixedAddress | Address
 ): [ChainId | undefined, Address] => {
-  validatePrefixedAddress(prefixedAddress)
-
   if (prefixedAddress.length == zeroAddress.length) {
+    if (!isAddress(prefixedAddress)) {
+      throw new Error(`Not an Address: ${prefixedAddress}`)
+    }
     return [undefined, getAddress(prefixedAddress)]
   } else {
+    if (prefixedAddress.indexOf(':') == -1) {
+      throw new Error(`Unsupported PrefixedAddress format: ${prefixedAddress}`)
+    }
     const [prefix, address] = prefixedAddress.split(':')
     const chain = chains.find(({ shortName }) => shortName === prefix)
+    if (prefix && prefix != 'eoa' && !chain) {
+      throw new Error(`Unsupported chain shortName: ${prefix}`)
+    }
 
     return [chain?.chainId, getAddress(address)] as const
   }
@@ -36,32 +43,4 @@ export const parsePrefixedAddress = (
 ): Address => {
   const [, address] = splitPrefixedAddress(prefixedAddress)
   return address
-}
-
-export const validatePrefixedAddress = (
-  prefixedAddress: PrefixedAddress | Address
-) => {
-  if (prefixedAddress.length == zeroAddress.length) {
-    if (!isAddress(prefixedAddress)) {
-      throw new Error(`Not an Address: ${prefixedAddress}`)
-    }
-  } else {
-    if (prefixedAddress.indexOf(':') == -1) {
-      throw new Error(`Unsupported PrefixedAddress format: ${prefixedAddress}`)
-    }
-
-    const [prefix, address] = prefixedAddress.split(':')
-
-    if (
-      prefix &&
-      prefix != 'eoa' &&
-      chains.every((chain) => chain.shortName != prefix)
-    ) {
-      throw new Error(`Unsupported chain shortName: ${prefix}`)
-    }
-
-    if (!isAddress(address)) {
-      throw new Error(`Not an Address: ${address}`)
-    }
-  }
 }

@@ -4,6 +4,7 @@ import { Eip1193Provider } from '@safe-global/protocol-kit'
 
 import { createPreApprovedSignature } from './signatures'
 import { encodeMultiSend } from './multisend'
+import { normalizeRoute } from './normalizeRoute'
 import { prepareSafeTransaction } from './safeTransaction'
 
 import { splitPrefixedAddress } from '../addresses'
@@ -64,6 +65,8 @@ export const planExecution = async (
   route: Route,
   options: Options = {}
 ): Promise<ExecutionPlan> => {
+  route = await normalizeRoute(route, options)
+
   // encode batch using the appropriate multiSend contract address
   const lastRolesAccount = route.waypoints.findLast(
     (wp) => wp.account.type === AccountType.ROLES
