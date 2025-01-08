@@ -20,15 +20,6 @@ export interface ExecuteTransactionAction {
   transaction: TransactionRequest
 }
 
-/** Represents a signature to be produced for the given message by the specified account */
-export interface SignMessageAction {
-  type: ExecutionActionType.SIGN_MESSAGE
-  chain: ChainId
-  from: PrefixedAddress
-
-  message: string
-}
-
 interface TypedDataField {
   name: string
   type: string
@@ -79,7 +70,6 @@ export type ExecutionAction =
   | ExecuteTransactionAction
   | SafeTransactionAction
   | ProposeTransactionAction
-  | SignMessageAction
   | SignTypedDataAction
 
 /**
