@@ -85,9 +85,9 @@ export default function encodeExecTransactionWithRole({
         abi: ROLES_V1_ABI,
         functionName: 'execTransactionWithRole',
         args: [
-          transaction.to as `0x${string}`,
+          transaction.to,
           BigInt(transaction.value),
-          transaction.data as `0x${string}`,
+          transaction.data,
           transaction.operation || 0,
           Number(BigInt(role)),
           true,
@@ -97,9 +97,9 @@ export default function encodeExecTransactionWithRole({
         abi: ROLES_V2_ABI,
         functionName: 'execTransactionWithRole',
         args: [
-          transaction.to as `0x${string}`,
+          transaction.to,
           BigInt(transaction.value),
-          transaction.data as `0x${string}`,
+          transaction.data,
           transaction.operation || 0,
           role,
           true,
