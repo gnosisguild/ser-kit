@@ -1,4 +1,3 @@
-import assert from 'assert'
 import {
   Address,
   Chain,
@@ -7,7 +6,6 @@ import {
   defineChain,
   getAddress,
   hashTypedData,
-  isAddress,
 } from 'viem'
 import { type Eip1193Provider } from '@safe-global/protocol-kit'
 import SafeApiKit from '@safe-global/api-kit'
@@ -68,7 +66,7 @@ export const execute = async (
         const [relayer] = (await provider.request({
           // message can be relayed by any account, request one
           method: 'eth_accounts',
-        })) as string[]
+        })) as Address[]
 
         const walletClient = getWalletClient({
           chain: action.chain,
@@ -98,12 +96,6 @@ export const execute = async (
         break
       }
       case ExecutionActionType.PROPOSE_TRANSACTION: {
-        const [relayer] = (await provider.request({
-          method: 'eth_accounts',
-        })) as string[]
-
-        assert(isAddress(relayer))
-
         const { chain, safe, safeTransaction, proposer } = action
         const previousOutput = state[i - 1]
 

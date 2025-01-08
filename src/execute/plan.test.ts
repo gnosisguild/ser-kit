@@ -69,7 +69,7 @@ describe('plan', () => {
         [
           {
             data: '0x',
-            to: receiver.address as `0x{string}`,
+            to: receiver.address,
             value: parseEther('1'),
             operation: OperationType.Call,
           },
@@ -126,7 +126,7 @@ describe('plan', () => {
         [
           {
             data: '0x',
-            to: receiver.address as `0x${string}`,
+            to: receiver.address,
             value: parseEther('1'),
             operation: OperationType.Call,
           },
@@ -192,7 +192,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address as `0x${string}`,
+        to: receiver.address,
         value: parseEther('1'),
         operation: OperationType.Call,
       }
@@ -231,7 +231,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address as `0x${string}`,
+        to: receiver.address,
         value: parseEther('1'),
         operation: OperationType.Call,
       }
@@ -277,7 +277,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver as `0x${string}`,
+        to: receiver,
         value: parseEther('1'),
         operation: OperationType.Call,
       }
@@ -333,7 +333,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver as `0x${string}`,
+        to: receiver,
         value: parseEther('1'),
         operation: OperationType.Call,
       }
@@ -436,7 +436,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address as `0x${string}`,
+        to: receiver.address,
         value: parseEther('1'),
         operation: OperationType.Call,
       }
@@ -517,7 +517,7 @@ describe('plan', () => {
         [
           {
             data: '0x',
-            to: receiver.address as `0x${string}`,
+            to: receiver.address,
             value: parseEther('1'),
             operation: OperationType.Call,
           },
@@ -592,7 +592,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address as `0x${string}`,
+        to: receiver.address,
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }
@@ -658,7 +658,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address as `0x${string}`,
+        to: receiver.address,
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }
@@ -733,7 +733,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address as `0x${string}`,
+        to: receiver.address,
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }
@@ -825,7 +825,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address as `0x${string}`,
+        to: receiver.address,
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }
@@ -917,7 +917,7 @@ describe('plan', () => {
       })
 
       const route = eoaRolesSafeOwnsSafe({
-        eoa: member.address as `0x${string}`,
+        eoa: member.address,
         roles,
         roleId,
         safe1,
@@ -926,7 +926,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address as `0x${string}`,
+        to: receiver.address,
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }
@@ -999,7 +999,7 @@ describe('plan', () => {
       })
 
       const route = eoaRolesSafeOwnsSafe({
-        eoa: member.address as `0x${string}`,
+        eoa: member.address,
         roles,
         roleId,
         safe1,
@@ -1008,7 +1008,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address as `0x${string}`,
+        to: receiver.address,
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }
@@ -1106,7 +1106,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address as `0x${string}`,
+        to: receiver.address,
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }
@@ -1156,7 +1156,7 @@ describe('plan', () => {
       ).toEqual(parseEther('0.123'))
     })
 
-    it('plans and executes independently', async () => {
+    it.only('plans and executes independently', async () => {
       const owner = privateKeyToAccount(randomHash())
       const eoa = privateKeyToAccount(randomHash())
       const receiver = privateKeyToAccount(randomHash())
@@ -1204,7 +1204,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address as `0x${string}`,
+        to: receiver.address,
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }

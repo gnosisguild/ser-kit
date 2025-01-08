@@ -18,7 +18,7 @@ export default function encodeExecTransaction({
     args: [
       safeTransaction.to,
       BigInt(safeTransaction.value),
-      safeTransaction.data as Hex,
+      safeTransaction.data,
       safeTransaction.operation,
       BigInt(safeTransaction.safeTxGas),
       BigInt(safeTransaction.baseGas),

@@ -1,4 +1,4 @@
-import { Address, getAddress } from 'viem'
+import { Address, getAddress, isAddress, zeroAddress } from 'viem'
 import { chains } from './chains'
 import type { ChainId, PrefixedAddress } from './types'
 
@@ -6,36 +6,41 @@ export const formatPrefixedAddress = (
   chainId: ChainId | undefined,
   address: Address
 ) => {
-  const chain = chainId && chains.find((chain) => chain.chainId === chainId)
+  const chain = chains.find((chain) => chain.chainId === chainId)
 
-  if (!chain && chainId) {
-    throw new Error(`Unsupported chain ID: ${chainId}`)
+  if (chainId && !chain) {
+    throw new Error(`Unsupported chainId: ${chainId}`)
   }
 
   const prefix = chain ? chain.shortName : 'eoa'
   return `${prefix}:${getAddress(address)}` as PrefixedAddress
 }
 
-export const splitPrefixedAddress = (prefixedAddress: PrefixedAddress) => {
-  const [prefix, address] = prefixedAddress.split(':')
-  const chain =
-    prefix !== 'eoa'
-      ? chains.find(({ shortName }) => shortName === prefix)
-      : undefined
-  if (!chain && prefix !== 'eoa') {
-    throw new Error(`Unknown chain prefix: ${prefix}`)
+export const splitPrefixedAddress = (
+  prefixedAddress: PrefixedAddress | Address
+): [ChainId | undefined, Address] => {
+  if (prefixedAddress.length == zeroAddress.length) {
+    if (!isAddress(prefixedAddress)) {
+      throw new Error(`Not an Address: ${prefixedAddress}`)
+    }
+    return [undefined, getAddress(prefixedAddress)]
+  } else {
+    if (prefixedAddress.indexOf(':') == -1) {
+      throw new Error(`Unsupported PrefixedAddress format: ${prefixedAddress}`)
+    }
+    const [prefix, address] = prefixedAddress.split(':')
+    const chain = chains.find(({ shortName }) => shortName === prefix)
+    if (prefix && prefix != 'eoa' && !chain) {
+      throw new Error(`Unsupported chain shortName: ${prefix}`)
+    }
+
+    return [chain?.chainId, getAddress(address)] as const
   }
-  const checksummedAddress = getAddress(address) as `0x${string}`
-  return [chain?.chainId, checksummedAddress] as const
 }
 
 export const parsePrefixedAddress = (
   prefixedAddress: PrefixedAddress | Address
-) => {
-  if (!prefixedAddress.includes(':')) {
-    return getAddress(prefixedAddress) as `0x${string}`
-  }
-
-  const [, address] = prefixedAddress.split(':')
-  return getAddress(address) as `0x${string}`
+): Address => {
+  const [, address] = splitPrefixedAddress(prefixedAddress)
+  return address
 }
