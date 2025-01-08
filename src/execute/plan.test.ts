@@ -40,6 +40,8 @@ import { planExecution } from './plan'
 import { execute } from './execute'
 import encodeExecTransaction from '../encode/execTransaction'
 
+type NonceConfig = number | 'enqueue' | 'override'
+
 const withPrefix = (address: Address) =>
   formatPrefixedAddress(testClient.chain.id, address)
 
@@ -81,6 +83,7 @@ describe('plan', () => {
             [formatPrefixedAddress(chainId, safe)]: {
               proposeOnly: false,
               onchainSignature: false,
+              nonce: 'override' as NonceConfig,
             },
           },
         }
@@ -138,6 +141,7 @@ describe('plan', () => {
             [formatPrefixedAddress(chainId, safe)]: {
               proposeOnly: false,
               onchainSignature: false,
+              nonce: 'override' as NonceConfig,
             },
           },
         }
@@ -200,7 +204,10 @@ describe('plan', () => {
       const plan = await planExecution([transaction], route, {
         providers: { [testClient.chain.id]: testClient as Eip1193Provider },
         safeTransactionProperties: {
-          [withPrefix(safe)]: { proposeOnly: true },
+          [withPrefix(safe)]: {
+            proposeOnly: true,
+            nonce: 'override' as NonceConfig,
+          },
         },
       })
 
@@ -239,6 +246,11 @@ describe('plan', () => {
       const chainId = testClient.chain.id
       const plan = await planExecution([transaction], route, {
         providers: { [chainId]: testClient as Eip1193Provider },
+        safeTransactionProperties: {
+          [withPrefix(safe)]: {
+            nonce: 'override' as NonceConfig,
+          },
+        },
       })
 
       expect(plan).toHaveLength(2)
@@ -285,6 +297,10 @@ describe('plan', () => {
       // plan a transfer of 1 eth into receiver
       const plan = await planExecution([transaction], route, {
         providers: { [chainId]: testClient as Eip1193Provider },
+        safeTransactionProperties: {
+          [withPrefix(safe1)]: { nonce: 'override' as NonceConfig },
+          [withPrefix(safe2)]: { nonce: 'override' as NonceConfig },
+        },
       })
 
       expect(plan).toHaveLength(3)
@@ -341,6 +357,10 @@ describe('plan', () => {
       // plan a transfer of 1 eth into receiver
       const plan = await planExecution([transaction], route, {
         providers: { [chainId]: testClient as Eip1193Provider },
+        safeTransactionProperties: {
+          [withPrefix(safe1)]: { nonce: 'override' as NonceConfig },
+          [withPrefix(safe2)]: { nonce: 'override' as NonceConfig },
+        },
       })
 
       expect(plan).toHaveLength(3)
@@ -444,6 +464,10 @@ describe('plan', () => {
       // plan a transfer of 1 eth into receiver
       const plan = await planExecution([transaction], route, {
         providers: { [chainId]: testClient as Eip1193Provider },
+        safeTransactionProperties: {
+          [withPrefix(safe1)]: { nonce: 'override' as NonceConfig },
+          [withPrefix(safe2)]: { nonce: 'override' as NonceConfig },
+        },
       })
 
       expect(plan).toHaveLength(2)
@@ -525,6 +549,10 @@ describe('plan', () => {
         route,
         {
           providers: { [chainId]: testClient as Eip1193Provider },
+          safeTransactionProperties: {
+            [withPrefix(safe1)]: { nonce: 'override' as NonceConfig },
+            [withPrefix(safe2)]: { nonce: 'override' as NonceConfig },
+          },
         }
       )
 
@@ -599,6 +627,9 @@ describe('plan', () => {
 
       const plan = await planExecution([transaction], route, {
         providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        safeTransactionProperties: {
+          [withPrefix(safe)]: { nonce: 'override' as NonceConfig },
+        },
       })
 
       expect(plan).toHaveLength(1)
@@ -665,6 +696,9 @@ describe('plan', () => {
 
       const plan = await planExecution([transaction], route, {
         providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        safeTransactionProperties: {
+          [withPrefix(safe)]: { nonce: 'override' as NonceConfig },
+        },
       })
 
       expect(plan).toHaveLength(1)
@@ -740,6 +774,9 @@ describe('plan', () => {
 
       const plan = await planExecution([transaction], route, {
         providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        safeTransactionProperties: {
+          [withPrefix(safe)]: { nonce: 'override' as NonceConfig },
+        },
       })
 
       expect(plan).toHaveLength(2)
@@ -832,6 +869,9 @@ describe('plan', () => {
 
       const plan = await planExecution([transaction], route, {
         providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        safeTransactionProperties: {
+          [withPrefix(safe)]: { nonce: 'override' as NonceConfig },
+        },
       })
 
       expect(plan).toHaveLength(2)
@@ -933,6 +973,10 @@ describe('plan', () => {
 
       const plan = await planExecution([transaction], route, {
         providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        safeTransactionProperties: {
+          [withPrefix(safe1)]: { nonce: 'override' as NonceConfig },
+          [withPrefix(safe2)]: { nonce: 'override' as NonceConfig },
+        },
       })
 
       expect(await testClient.getBalance({ address: safe2 })).toEqual(
@@ -1015,6 +1059,10 @@ describe('plan', () => {
 
       const plan = await planExecution([transaction], route, {
         providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        safeTransactionProperties: {
+          [withPrefix(safe1)]: { nonce: 'override' as NonceConfig },
+          [withPrefix(safe2)]: { nonce: 'override' as NonceConfig },
+        },
       })
 
       expect(plan).toHaveLength(2)
@@ -1113,6 +1161,9 @@ describe('plan', () => {
 
       const plan = await planExecution([transaction], route, {
         providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        safeTransactionProperties: {
+          [withPrefix(safe)]: { nonce: 'override' as NonceConfig },
+        },
       })
 
       expect(plan).toHaveLength(2)
@@ -1156,7 +1207,7 @@ describe('plan', () => {
       ).toEqual(parseEther('0.123'))
     })
 
-    it.only('plans and executes independently', async () => {
+    it('plans and executes independently', async () => {
       const owner = privateKeyToAccount(randomHash())
       const eoa = privateKeyToAccount(randomHash())
       const receiver = privateKeyToAccount(randomHash())
@@ -1211,6 +1262,9 @@ describe('plan', () => {
 
       const plan = await planExecution([transaction], route, {
         providers: { [testClient.chain.id]: testClient as Eip1193Provider },
+        safeTransactionProperties: {
+          [withPrefix(safe)]: { nonce: 'override' as NonceConfig },
+        },
       })
 
       expect(plan).toHaveLength(2)

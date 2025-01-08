@@ -89,7 +89,7 @@ export type ExecutionPlan = [ExecutionAction, ...ExecutionAction[]]
 export type ExecutionState = `0x${string}`[]
 
 export interface SafeTransactionProperties
-  extends SafeTransactionOptionalProps {
+  extends Omit<SafeTransactionOptionalProps, 'nonce'> {
   /**
    * If a Safe transaction is executable, only approve/propose the transaction,
    * but don't execute it. Anyone will be able to trigger execution.
@@ -100,4 +100,9 @@ export interface SafeTransactionProperties
    * on-chain
    **/
   onchainSignature?: boolean
+  /**
+   * Defines the method used to derive the safeTransaction's nonce. Enqueue gets it
+   * from the txService. Override gets it from onchain. A concrete nonce can be provided
+   */
+  nonce?: 'enqueue' | 'override' | number
 }
