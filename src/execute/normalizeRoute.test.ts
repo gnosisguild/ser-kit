@@ -2,14 +2,12 @@ import assert from 'assert'
 
 import { expect, describe, it } from 'bun:test'
 
-import { encodeMultiSend } from './multisend'
 import { privateKeyToAccount } from 'viem/accounts'
 import { randomHash, testClient } from '../../test/client'
 import { deploySafe } from '../../test/avatar'
 import { eoaSafe } from '../../test/routes'
-import { AccountType, Safe } from '../types'
+import { AccountType, ChainId } from '../types'
 import { normalizeRoute } from './normalizeRoute'
-import { Eip1193Provider } from '@safe-global/protocol-kit'
 
 describe('normalizeRoute', () => {
   it('queries and patches missing threshold in a SAFE account', async () => {
@@ -38,9 +36,10 @@ describe('normalizeRoute', () => {
     ;(route.waypoints[1].account as any).threshold = undefined
     assert(route.waypoints[1].account.threshold == undefined)
 
-    route = await normalizeRoute(route, testClient as Eip1193Provider)
+    route = await normalizeRoute(route, {
+      providers: { [testClient.chain.id as ChainId]: testClient },
+    })
     assert(route.waypoints[1].account.type == AccountType.SAFE)
-
     expect(route.waypoints[1].account.threshold).toEqual(3)
   })
 })

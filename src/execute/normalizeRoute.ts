@@ -1,24 +1,25 @@
-import { Address, encodeFunctionData, getAddress, parseAbi } from 'viem'
-import { type Eip1193Provider } from '@safe-global/protocol-kit'
+import { Address, encodeFunctionData, parseAbi } from 'viem'
 
-import { validatePrefixedAddress } from '../addresses'
+import { splitPrefixedAddress, validatePrefixedAddress } from '../addresses'
 
 import {
   Account,
   AccountType,
+  ChainId,
   Connection,
   PrefixedAddress,
   Route,
   StartingPoint,
   Waypoint,
 } from '../types'
+import { getEip1193Provider, Options } from './options'
 
 export async function normalizeRoute(
   route: Route,
-  provider: Eip1193Provider
+  options?: Options
 ): Promise<Route> {
   const waypoints = await Promise.all(
-    route.waypoints.map((w) => normalizeWaypoint(w, provider))
+    route.waypoints.map((w) => normalizeWaypoint(w, options))
   )
 
   return {
@@ -31,11 +32,11 @@ export async function normalizeRoute(
 
 export async function normalizeWaypoint(
   waypoint: StartingPoint | Waypoint,
-  provider: Eip1193Provider
+  options?: Options
 ): Promise<StartingPoint | Waypoint> {
   waypoint = {
     ...waypoint,
-    account: await normalizeAccount(waypoint.account, provider),
+    account: await normalizeAccount(waypoint.account, options),
   }
 
   if ('connection' in waypoint) {
@@ -50,7 +51,7 @@ export async function normalizeWaypoint(
 
 async function normalizeAccount(
   account: Account,
-  provider: Eip1193Provider
+  options?: Options
 ): Promise<Account> {
   account = {
     ...account,
@@ -62,7 +63,7 @@ async function normalizeAccount(
     account.type == AccountType.SAFE &&
     typeof account.threshold != 'number'
   ) {
-    account.threshold = await fetchThreshold(account.address, provider)
+    account.threshold = await fetchThreshold(account, options)
   }
 
   return account
@@ -86,18 +87,20 @@ function normalizePrefixedAddress(address: PrefixedAddress): PrefixedAddress {
 }
 
 async function fetchThreshold(
-  safe: Address,
-  provider: Eip1193Provider
+  account: Account,
+  options?: Options
 ): Promise<number> {
-  const abi = parseAbi(['function getThreshold() view returns (uint256)'])
+  const [chainId, safe] = splitPrefixedAddress(account.prefixedAddress)
+  const provider = getEip1193Provider({ chainId: chainId as ChainId, options })
+
   return Number(
     await provider.request({
       method: 'eth_call',
       params: [
         {
-          to: getAddress(safe),
+          to: safe,
           data: encodeFunctionData({
-            abi,
+            abi: parseAbi(['function getThreshold() view returns (uint256)']),
             functionName: 'getThreshold',
             args: [],
           }),
