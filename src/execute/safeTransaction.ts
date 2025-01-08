@@ -1,18 +1,14 @@
 import {
   Address,
-  createPublicClient,
   encodeFunctionData,
   getAddress,
-  http,
   parseAbi,
   zeroAddress,
 } from 'viem'
 import { OperationType } from '@safe-global/types-kit'
-import { Eip1193Provider } from '@safe-global/protocol-kit'
 
 import { formatPrefixedAddress } from '../addresses'
-
-import { chains, defaultRpc } from '../chains'
+import { getEip1193Provider, Options } from './options'
 
 import {
   ChainId,
@@ -20,16 +16,6 @@ import {
   PrefixedAddress,
   SafeTransactionRequest,
 } from '../types'
-import { SafeTransactionProperties } from './types'
-
-interface Options {
-  providers?: {
-    [chainId in ChainId]?: string | Eip1193Provider
-  }
-  safeTransactionProperties?: {
-    [safe: PrefixedAddress]: SafeTransactionProperties
-  }
-}
 
 export async function prepareSafeTransaction({
   chainId,
@@ -43,8 +29,13 @@ export async function prepareSafeTransaction({
   options?: Options
 }): Promise<SafeTransactionRequest> {
   const provider = getEip1193Provider({ chainId, options })
+
+  const key1 = formatPrefixedAddress(chainId, safe)
+  const key2 = key1.toLowerCase() as PrefixedAddress
+
   const defaults =
-    options?.safeTransactionProperties?.[formatPrefixedAddress(chainId, safe)]
+    options?.safeTransactionProperties?.[key1] ||
+    options?.safeTransactionProperties?.[key2]
 
   const avatarAbi = parseAbi(['function nonce() view returns (uint256)'])
 
@@ -78,37 +69,5 @@ export async function prepareSafeTransaction({
       defaults?.refundReceiver || zeroAddress
     ) as `0x${string}`,
     nonce: Number(defaults?.nonce || nonce),
-  }
-}
-
-function getEip1193Provider({
-  chainId,
-  options,
-}: {
-  chainId: ChainId
-  options?: Options
-}): Eip1193Provider {
-  const chain = chainId && chains.find((chain) => chain.chainId === chainId)
-  if (!chain) {
-    throw new Error(`Unsupported chain ID: ${chainId}`)
-  }
-
-  const passedIn = Boolean(
-    options && options.providers && options.providers[chainId]
-  )
-
-  let urlOrProvider
-  if (passedIn) {
-    urlOrProvider = options!.providers![chainId]!
-  } else {
-    urlOrProvider = defaultRpc[chainId]!
-  }
-
-  if (typeof urlOrProvider == 'string') {
-    return createPublicClient({
-      transport: http(urlOrProvider),
-    }) as Eip1193Provider
-  } else {
-    return urlOrProvider
   }
 }
