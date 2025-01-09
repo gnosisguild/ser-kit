@@ -1,4 +1,3 @@
-import assert from 'assert'
 import {
   Address,
   encodeFunctionData,
@@ -18,6 +17,7 @@ import {
   PrefixedAddress,
   SafeTransactionRequest,
 } from '../types'
+import { invariant } from '@epic-web/invariant'
 
 export async function prepareSafeTransaction({
   chainId,
@@ -63,13 +63,17 @@ async function nonce({
   const config = nonceConfig({ chainId, safe, options })
   if (config == 'enqueue') {
     return fetchQueueNonce({ chainId, safe })
-  } else if (config == 'override') {
-    return fetchOnChainNonce({ chainId, safe, options })
-  } else {
-    const nonce = config
-    assert(typeof nonce == 'number')
-    return nonce
   }
+
+  if (config == 'override') {
+    return fetchOnChainNonce({ chainId, safe, options })
+  }
+  const nonce = config
+  invariant(
+    typeof nonce == 'number',
+    `Expected nonce to have type "number" but got "${typeof nonce}"`
+  )
+  return nonce
 }
 
 async function fetchOnChainNonce({
