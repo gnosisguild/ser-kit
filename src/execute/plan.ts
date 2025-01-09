@@ -1,4 +1,3 @@
-import assert from 'assert'
 import { decodeFunctionData, hashTypedData, parseAbi, zeroAddress } from 'viem'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 
@@ -37,6 +36,7 @@ import {
   type Route,
   type Waypoint,
 } from '../types'
+import { invariant } from '@epic-web/invariant'
 
 interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
@@ -120,8 +120,11 @@ const planAsEOA = async (
   index: number
 ): Promise<ExecutionAction[]> => {
   const { waypoint, right } = pointers(waypoints, index)
-  assert(waypoint.account.type == AccountType.EOA)
-  assert(right != null)
+  invariant(
+    waypoint.account.type == AccountType.EOA,
+    `Expected account type to be "${AccountType.EOA}" but got "${waypoint.account.type}"`
+  )
+  invariant(right != null, 'Expected next waypoint to not be undefined')
 
   if (
     request.type === ExecutionActionType.SAFE_TRANSACTION ||
@@ -158,19 +161,24 @@ const planAsSafe = async (
 ): Promise<ExecutionAction[]> => {
   const { waypoint, connection, left, right } = pointers(waypoints, index)
 
-  assert(waypoint.account.type == AccountType.SAFE)
+  invariant(
+    waypoint.account.type == AccountType.SAFE,
+    `Expected account type to be "${AccountType.SAFE}" but got "${waypoint.account.type}"`
+  )
 
   if (left !== null) {
-    assert(
+    invariant(
       connection?.type == ConnectionType.IS_ENABLED ||
-        connection?.type == ConnectionType.OWNS
+        connection?.type == ConnectionType.OWNS,
+      `Connection type must be "${ConnectionType.IS_ENABLED}" or "${ConnectionType.OWNS}" but got "${connection?.type}"`
     )
   }
 
-  assert(
+  invariant(
     request.type == ExecutionActionType.SAFE_TRANSACTION ||
       request.type == ExecutionActionType.PROPOSE_TRANSACTION ||
-      request.type == ExecutionActionType.EXECUTE_TRANSACTION
+      request.type == ExecutionActionType.EXECUTE_TRANSACTION,
+    `Request type must be "${ExecutionActionType.SAFE_TRANSACTION}", "${ExecutionActionType.PROPOSE_TRANSACTION}", or "${ExecutionActionType.EXECUTE_TRANSACTION}" nut was "${request.type}"`
   )
 
   const isAnchor = right == null
@@ -203,7 +211,10 @@ const planAsSafe = async (
       request.type == ExecutionActionType.PROPOSE_TRANSACTION) &&
     !isAnchor
   ) {
-    assert(right.account.type == AccountType.SAFE)
+    invariant(
+      right.account.type == AccountType.SAFE,
+      `Expected account type "${AccountType.SAFE}" but got "${right.account.type}"`
+    )
     const typedData = typedDataForSafeTransaction({
       chainId: right.account.chain,
       safeAddress: right.account.address,
@@ -250,7 +261,9 @@ const planAsSafe = async (
       },
       ...result,
     ]
-  } else if (isUpstreamModule) {
+  }
+
+  if (isUpstreamModule) {
     return [
       {
         type: ExecutionActionType.EXECUTE_TRANSACTION,
@@ -264,18 +277,19 @@ const planAsSafe = async (
       },
       ...result,
     ]
-  } else {
-    assert(isInitiator)
-    return [
-      {
-        type: ExecutionActionType.EXECUTE_TRANSACTION,
-        chain: waypoint.account.chain,
-        from: waypoint.account.address,
-        transaction,
-      },
-      ...result,
-    ]
   }
+
+  invariant(isInitiator, 'Expected isInitiator to be "true"')
+
+  return [
+    {
+      type: ExecutionActionType.EXECUTE_TRANSACTION,
+      chain: waypoint.account.chain,
+      from: waypoint.account.address,
+      transaction,
+    },
+    ...result,
+  ]
 }
 
 const planAsRoles = async (
@@ -288,7 +302,10 @@ const planAsRoles = async (
    * coming soon: relays for Modules
    */
   const { waypoint, left, right } = pointers(waypoints, index)
-  assert(waypoint.account.type == AccountType.ROLES)
+  invariant(
+    waypoint.account.type == AccountType.ROLES,
+    `Expected account type to be "${AccountType.ROLES}" but got "${waypoint.account.type}"`
+  )
 
   const validUpstream =
     left != null &&
@@ -297,7 +314,10 @@ const planAsRoles = async (
   if (!validUpstream) {
     throw new Error(`Invalid Roles upstream relationship`)
   }
-  assert(waypoint.connection.type == ConnectionType.IS_MEMBER)
+  invariant(
+    waypoint.connection.type == ConnectionType.IS_MEMBER,
+    `Expected connection type to be "${ConnectionType.IS_MEMBER}" but got "${waypoint.connection.type}"`
+  )
 
   const validDownstream =
     right?.connection.type == ConnectionType.IS_ENABLED &&
@@ -344,8 +364,11 @@ const planAsDelay = async (
    * coming soon: relays for Modules
    */
   const { waypoint, left } = pointers(waypoints, index)
-  assert(waypoint.account.type == AccountType.DELAY)
-  assert(left != null)
+  invariant(
+    waypoint.account.type == AccountType.DELAY,
+    `Expected account type to be "${AccountType.DELAY}" but got "${waypoint.account.type}"`
+  )
+  invariant(left != null, 'Expected waypoint to have a predecessor')
 
   const transaction = unwrapExecuteTransaction(
     request as ExecuteTransactionAction
@@ -376,7 +399,10 @@ const planAsDelay = async (
 }
 
 function shouldPropose(waypoint: Waypoint | StartingPoint, options?: Options) {
-  assert(waypoint.account.type == AccountType.SAFE)
+  invariant(
+    waypoint.account.type == AccountType.SAFE,
+    `Expected account type to be "${AccountType.SAFE}" but got "${waypoint.account.type}"`
+  )
   const safeTransactionProperties =
     options?.safeTransactionProperties?.[waypoint.account.prefixedAddress]
 
@@ -414,18 +440,24 @@ function pointers(waypoints: Route['waypoints'], index: number) {
 
   const left = index > 0 ? waypoints[index - 1] : null
   if (left) {
-    assert(
+    invariant(
       'connection' in waypoint &&
-        waypoint.connection.from == left.account.prefixedAddress
+        waypoint.connection.from == left.account.prefixedAddress,
+      'connection' in waypoint
+        ? `Expected "${waypoint.connection.from}" to equal "${left.account.prefixedAddress}"`
+        : 'Expected waypoint to contain a connection but it did not.'
     )
   }
 
   const right = index < waypoints.length + 1 ? waypoints[index + 1] : null
   if (right) {
-    assert(
+    invariant(
       'connection' in right &&
         (right.connection as Connection).from ==
-          waypoint.account.prefixedAddress
+          waypoint.account.prefixedAddress,
+      'connection' in right
+        ? `Expected "${(right.connection as Connection).from}" to equal "${waypoint.account.prefixedAddress}"`
+        : 'Expected waypoint to contain a connection but it did not'
     )
   }
 
