@@ -1,5 +1,5 @@
-import { Address, encodeFunctionData, Hex, parseAbi } from 'viem'
-import { SafeTransactionRequest, TransactionRequest } from '../types'
+import { encodeFunctionData, Hex, parseAbi } from 'viem'
+import { SafeTransactionRequest } from '../types'
 
 const abi = parseAbi([
   'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures) payable returns (bool success)',
