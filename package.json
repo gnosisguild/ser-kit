@@ -41,6 +41,6 @@
     "@safe-global/protocol-kit": "^5.1.1",
     "@safe-global/safe-deployments": "^1.37.22",
     "@safe-global/types-kit": "^1.0.1",
-    "viem": "^2.22.4"
+    "viem": "^2.22.17"
   }
 }
