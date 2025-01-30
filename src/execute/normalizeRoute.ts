@@ -1,6 +1,6 @@
-import { encodeFunctionData, getAddress, parseAbi } from 'viem'
+import { Address, encodeFunctionData, getAddress, parseAbi } from 'viem'
 
-import { formatPrefixedAddress, splitPrefixedAddress } from '../addresses'
+import { prefixAddress, splitPrefixedAddress } from '../addresses'
 
 import {
   Account,
@@ -34,19 +34,13 @@ export async function normalizeWaypoint(
   waypoint: StartingPoint | Waypoint,
   options?: Options
 ): Promise<StartingPoint | Waypoint> {
-  waypoint = {
+  return {
     ...waypoint,
     account: await normalizeAccount(waypoint.account, options),
+    ...('connection' in waypoint
+      ? { connection: normalizeConnection(waypoint.connection as Connection) }
+      : {}),
   }
-
-  if ('connection' in waypoint) {
-    waypoint = {
-      ...waypoint,
-      connection: normalizeConnection(waypoint.connection as Connection),
-    }
-  }
-
-  return waypoint
 }
 
 async function normalizeAccount(
@@ -55,7 +49,7 @@ async function normalizeAccount(
 ): Promise<Account> {
   account = {
     ...account,
-    address: getAddress(account.address),
+    address: getAddress(account.address).toLowerCase() as Address,
     prefixedAddress: normalizePrefixedAddress(account.prefixedAddress),
   }
 
@@ -80,7 +74,7 @@ function normalizePrefixedAddress(
   prefixedAddress: PrefixedAddress
 ): PrefixedAddress {
   const [chainId, address] = splitPrefixedAddress(prefixedAddress)
-  return formatPrefixedAddress(chainId, address)
+  return prefixAddress(chainId, address)
 }
 
 async function fetchThreshold(
