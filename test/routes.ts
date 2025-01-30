@@ -3,7 +3,7 @@ import { Address, Hash } from 'viem'
 import { testClient } from './client'
 
 import { calculateRouteId } from '../src/query'
-import { formatPrefixedAddress } from '../src/addresses'
+import { prefixAddress } from '../src/addresses'
 
 import {
   AccountType,
@@ -140,7 +140,7 @@ export const testRoutes = {
 } satisfies { [name: string]: Route }
 
 const withPrefix = (address: Address) =>
-  formatPrefixedAddress(testClient.chain.id, address)
+  prefixAddress(testClient.chain.id, address)
 
 export function eoaSafe({
   eoa,

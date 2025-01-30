@@ -5,7 +5,7 @@ import { privateKeyToAccount } from 'viem/accounts'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 import { OperationType } from '@safe-global/types-kit'
 
-import { formatPrefixedAddress } from '../addresses'
+import { prefixAddress } from '../addresses'
 
 import { MetaTransactionRequest } from '../types'
 import {
@@ -43,7 +43,7 @@ import encodeExecTransaction from '../encode/execTransaction'
 type NonceConfig = number | 'enqueue' | 'override'
 
 const withPrefix = (address: Address) =>
-  formatPrefixedAddress(testClient.chain.id, address)
+  prefixAddress(testClient.chain.id, address)
 
 describe('plan', () => {
   describe('EOA --owns--> SAFE-1/1', () => {
@@ -80,7 +80,7 @@ describe('plan', () => {
         {
           providers: { [chainId]: testClient as Eip1193Provider },
           safeTransactionProperties: {
-            [formatPrefixedAddress(chainId, safe)]: {
+            [prefixAddress(chainId, safe)]: {
               proposeOnly: false,
               onchainSignature: false,
               nonce: 'override' as NonceConfig,
@@ -138,7 +138,7 @@ describe('plan', () => {
         {
           providers: { [chainId]: testClient as Eip1193Provider },
           safeTransactionProperties: {
-            [formatPrefixedAddress(chainId, safe)]: {
+            [prefixAddress(chainId, safe)]: {
               proposeOnly: false,
               onchainSignature: false,
               nonce: 'override' as NonceConfig,
@@ -372,7 +372,7 @@ describe('plan', () => {
       ]
 
       expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
-      expect(sign.from).toEqual(getAddress(eoa.address))
+      expect(sign.from).toEqual(eoa.address.toLowerCase() as any)
 
       const signature = await eoa.signTypedData(sign.typedData)
       expect(execute1.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
@@ -564,7 +564,7 @@ describe('plan', () => {
       ]
 
       expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
-      expect(sign.from).toEqual(getAddress(eoa.address))
+      expect(sign.from).toEqual(eoa.address.toLowerCase() as any)
 
       const signature = await eoa.signTypedData(sign.typedData)
 
@@ -1277,8 +1277,8 @@ describe('plan', () => {
       expect(execute1.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
       expect(execute2.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
 
-      expect(execute1.transaction.to).toEqual(roles as any)
-      expect(execute2.transaction.to).toEqual(delay as any)
+      expect(execute1.transaction.to).toEqual(roles.toLowerCase() as any)
+      expect(execute2.transaction.to).toEqual(delay.toLowerCase() as any)
 
       expect(await testClient.getBalance({ address: safe })).toEqual(
         parseEther('10')
