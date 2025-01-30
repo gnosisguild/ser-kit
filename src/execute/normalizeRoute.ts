@@ -50,18 +50,28 @@ async function normalizeAccount(
 ): Promise<Account> {
   account = {
     ...account,
-    address: getAddress(account.address).toLowerCase() as Address,
+    address: normalizeAddress(account.address),
     prefixedAddress: normalizePrefixedAddress(account.prefixedAddress),
+    ...('multisend' in account
+      ? { multisend: account.multisend.map(normalizeAddress) }
+      : {}),
   }
 
   if (
     account.type == AccountType.SAFE &&
     typeof account.threshold != 'number'
   ) {
-    account.threshold = await fetchThreshold(account, options)
+    account = {
+      ...account,
+      threshold: await fetchThreshold(account, options),
+    }
   }
 
   return account
+}
+
+function normalizeAddress(address: any): Address {
+  return getAddress(address).toLowerCase() as Address
 }
 
 function normalizeConnection(connection: Connection): Connection {
