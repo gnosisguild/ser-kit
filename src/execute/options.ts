@@ -1,11 +1,11 @@
-import { Address, createPublicClient, http } from 'viem'
+import { createPublicClient, http } from 'viem'
 
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 
 import { chains, defaultRpc } from '../chains'
-import { formatPrefixedAddress } from '../addresses'
+import { prefixAddress } from '../addresses'
 
-import { ChainId, PrefixedAddress } from '../types'
+import { Address, ChainId, PrefixedAddress } from '../types'
 import { SafeTransactionProperties } from './types'
 
 export interface Options {
@@ -58,14 +58,10 @@ export function nonceConfig({
   safe: Address
   options?: Options
 }): 'enqueue' | 'override' | number {
-  const key1 = formatPrefixedAddress(chainId, safe)
-  const key2 = key1.toLocaleLowerCase() as PrefixedAddress
-
   const properties =
     options &&
     options.safeTransactionProperties &&
-    (options.safeTransactionProperties[key1] ||
-      options.safeTransactionProperties[key2])
+    options.safeTransactionProperties[prefixAddress(chainId, safe)]
 
   if (typeof properties?.nonce == 'undefined') {
     return 'enqueue'

@@ -1,5 +1,7 @@
-import { Address, Hex, zeroAddress } from 'viem'
+import { Hex, zeroAddress } from 'viem'
 import { OperationType } from '@safe-global/types-kit'
+
+import { Address } from './types'
 
 export function typedDataForSafeTransaction({
   chainId,

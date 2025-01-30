@@ -1,10 +1,11 @@
 import { encodeFunctionData, getAddress, parseAbi } from 'viem'
 
-import { formatPrefixedAddress, splitPrefixedAddress } from '../addresses'
+import { prefixAddress, splitPrefixedAddress } from '../addresses'
 
 import {
   Account,
   AccountType,
+  Address,
   ChainId,
   Connection,
   PrefixedAddress,
@@ -34,19 +35,13 @@ export async function normalizeWaypoint(
   waypoint: StartingPoint | Waypoint,
   options?: Options
 ): Promise<StartingPoint | Waypoint> {
-  waypoint = {
+  return {
     ...waypoint,
     account: await normalizeAccount(waypoint.account, options),
+    ...('connection' in waypoint
+      ? { connection: normalizeConnection(waypoint.connection as Connection) }
+      : {}),
   }
-
-  if ('connection' in waypoint) {
-    waypoint = {
-      ...waypoint,
-      connection: normalizeConnection(waypoint.connection as Connection),
-    }
-  }
-
-  return waypoint
 }
 
 async function normalizeAccount(
@@ -55,18 +50,28 @@ async function normalizeAccount(
 ): Promise<Account> {
   account = {
     ...account,
-    address: getAddress(account.address),
+    address: normalizeAddress(account.address),
     prefixedAddress: normalizePrefixedAddress(account.prefixedAddress),
+    ...('multisend' in account
+      ? { multisend: account.multisend.map(normalizeAddress) }
+      : {}),
   }
 
   if (
     account.type == AccountType.SAFE &&
     typeof account.threshold != 'number'
   ) {
-    account.threshold = await fetchThreshold(account, options)
+    account = {
+      ...account,
+      threshold: await fetchThreshold(account, options),
+    }
   }
 
   return account
+}
+
+function normalizeAddress(address: any): Address {
+  return getAddress(address).toLowerCase() as Address
 }
 
 function normalizeConnection(connection: Connection): Connection {
@@ -80,7 +85,7 @@ function normalizePrefixedAddress(
   prefixedAddress: PrefixedAddress
 ): PrefixedAddress {
   const [chainId, address] = splitPrefixedAddress(prefixedAddress)
-  return formatPrefixedAddress(chainId, address)
+  return prefixAddress(chainId, address)
 }
 
 async function fetchThreshold(

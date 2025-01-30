@@ -1,23 +1,17 @@
-import {
-  Address,
-  encodeFunctionData,
-  getAddress,
-  parseAbi,
-  zeroAddress,
-} from 'viem'
+import { invariant } from '@epic-web/invariant'
+import { encodeFunctionData, getAddress, parseAbi, zeroAddress } from 'viem'
 import SafeApiKit from '@safe-global/api-kit'
 import { OperationType } from '@safe-global/types-kit'
 
-import { formatPrefixedAddress } from '../addresses'
+import { prefixAddress } from '../addresses'
 import { getEip1193Provider, nonceConfig, Options } from './options'
 
 import {
+  Address,
   ChainId,
   MetaTransactionRequest,
-  PrefixedAddress,
   SafeTransactionRequest,
 } from '../types'
-import { invariant } from '@epic-web/invariant'
 
 export async function prepareSafeTransaction({
   chainId,
@@ -30,12 +24,8 @@ export async function prepareSafeTransaction({
   transaction: MetaTransactionRequest
   options?: Options
 }): Promise<SafeTransactionRequest> {
-  const key1 = formatPrefixedAddress(chainId, safe)
-  const key2 = key1.toLowerCase() as PrefixedAddress
-
   const defaults =
-    options?.safeTransactionProperties?.[key1] ||
-    options?.safeTransactionProperties?.[key2]
+    options?.safeTransactionProperties?.[prefixAddress(chainId, safe)]
 
   return {
     to: transaction.to,
@@ -45,8 +35,10 @@ export async function prepareSafeTransaction({
     safeTxGas: BigInt(defaults?.safeTxGas || 0),
     baseGas: BigInt(defaults?.baseGas || 0),
     gasPrice: BigInt(defaults?.gasPrice || 0),
-    gasToken: getAddress(defaults?.gasToken || zeroAddress),
-    refundReceiver: getAddress(defaults?.refundReceiver || zeroAddress),
+    gasToken: getAddress(defaults?.gasToken || zeroAddress) as Address,
+    refundReceiver: getAddress(
+      defaults?.refundReceiver || zeroAddress
+    ).toLowerCase() as Address,
     nonce: await nonce({ chainId, safe, options }),
   }
 }

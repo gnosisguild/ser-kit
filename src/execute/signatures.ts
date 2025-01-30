@@ -1,4 +1,6 @@
-import { Address, concat, Hex, pad, zeroHash } from 'viem'
+import { concat, pad, zeroHash } from 'viem'
+
+import { Address } from '../types'
 
 export const createPreApprovedSignature = (approver: Address) => {
   /**
@@ -26,5 +28,5 @@ export const createPreApprovedSignature = (approver: Address) => {
    * - **Signature type**: The type of the signature, which in this context is 1.
    */
 
-  return concat([pad(approver as Hex), zeroHash, '0x01'])
+  return concat([pad(approver), zeroHash, '0x01'])
 }

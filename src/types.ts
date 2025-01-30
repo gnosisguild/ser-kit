@@ -1,9 +1,10 @@
 import { Hex } from 'viem'
-import { chains } from './chains'
 import { OperationType } from '@safe-global/types-kit'
 
+import { chains } from './chains'
+
 export interface TransactionRequest {
-  to: Hex
+  to: Address
   data: Hex
   value: bigint
 }
@@ -17,17 +18,17 @@ export interface SafeTransactionRequest extends MetaTransactionRequest {
   safeTxGas: bigint
   baseGas: bigint
   gasPrice: bigint
-  gasToken: Hex
-  refundReceiver: Hex
+  gasToken: Address
+  refundReceiver: Address
   nonce: number
 }
 
 export type ChainId = (typeof chains)[number]['chainId']
 export type ChainShortName = (typeof chains)[number]['shortName']
 
-export type PrefixedAddress =
-  | `${ChainShortName}:0x${string}`
-  | `eoa:0x${string}`
+export type Address = `0x${Lowercase<string>}`
+
+export type PrefixedAddress = `${ChainShortName}:${Address}` | `eoa:${Address}`
 
 export enum AccountType {
   EOA = 'EOA',
@@ -38,13 +39,13 @@ export enum AccountType {
 
 export interface Eoa {
   type: AccountType.EOA
-  address: `0x${string}`
+  address: Address
   prefixedAddress: PrefixedAddress
 }
 
 export interface Safe {
   type: AccountType.SAFE
-  address: `0x${string}`
+  address: Address
   prefixedAddress: PrefixedAddress
 
   chain: ChainId
@@ -53,17 +54,17 @@ export interface Safe {
 
 export interface Roles {
   type: AccountType.ROLES
-  address: `0x${string}`
+  address: Address
   prefixedAddress: PrefixedAddress
 
   chain: ChainId
-  multisend: `0x${string}`[]
+  multisend: Address[]
   version: 1 | 2
 }
 
 export interface Delay {
   type: AccountType.DELAY
-  address: `0x${string}`
+  address: Address
   prefixedAddress: PrefixedAddress
 
   chain: ChainId

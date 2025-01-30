@@ -1,8 +1,14 @@
-import { Address, encodeFunctionData, parseAbi, PrivateKeyAccount } from 'viem'
+import {
+  encodeFunctionData,
+  getAddress,
+  parseAbi,
+  PrivateKeyAccount,
+} from 'viem'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 import { deployProxy } from '@gnosis-guild/zodiac-core'
 
 import { randomHash, testClient } from './client'
+import { Address } from '../src'
 
 /*
  * Deploys and enables a roles mod on avatar, that is allowed to call and/or
@@ -23,7 +29,7 @@ export async function setupRolesMod({
 }) {
   const roleId = randomHash()
   const roles = await deployRolesMod({
-    owner: owner.address,
+    owner: getAddress(owner.address).toLowerCase() as Address,
     avatar: avatar,
     target: target || avatar,
   })
@@ -81,7 +87,7 @@ async function deployRolesMod({
     provider: testClient as Eip1193Provider,
   })
 
-  return address
+  return address.toLowerCase() as Address
 }
 
 const rolesAbi = parseAbi([

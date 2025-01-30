@@ -1,5 +1,4 @@
 import {
-  Address,
   Chain,
   createWalletClient,
   custom,
@@ -20,7 +19,7 @@ import {
   type ExecutionPlan,
   type ExecutionState,
 } from './types'
-import type { ChainId } from '../types'
+import type { Address, ChainId } from '../types'
 
 /**
  * Executes the given plan, continuing from the given state. Mutates the state array to track execution progress.

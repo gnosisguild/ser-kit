@@ -1,7 +1,7 @@
 export {
-  formatPrefixedAddress,
+  prefixAddress,
+  unprefixAddress,
   splitPrefixedAddress,
-  parsePrefixedAddress,
 } from './addresses'
 
 export { chains } from './chains'
@@ -19,6 +19,7 @@ export {
 } from './execute'
 
 export {
+  type Address,
   type TransactionRequest,
   type MetaTransactionRequest,
   type SafeTransactionRequest,
