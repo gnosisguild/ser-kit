@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test'
-import { parsePrefixedAddress, splitPrefixedAddress } from './addresses'
 import { zeroAddress } from 'viem'
+
+import { unprefixAddress, splitPrefixedAddress } from './addresses'
+
 import { PrefixedAddress } from './types'
 
 describe('splitPrefixedAddress', () => {
@@ -28,10 +30,10 @@ describe('splitPrefixedAddress', () => {
 
 describe('parsePrefixedAddress', () => {
   it('returns the address part of a prefixed address', () => {
-    expect(parsePrefixedAddress(`eth:${zeroAddress}`)).toEqual(zeroAddress)
+    expect(unprefixAddress(`eth:${zeroAddress}`)).toEqual(zeroAddress)
   })
 
   it('is the identify function when the input is already an address', () => {
-    expect(parsePrefixedAddress(zeroAddress)).toEqual(zeroAddress)
+    expect(unprefixAddress(zeroAddress)).toEqual(zeroAddress)
   })
 })
