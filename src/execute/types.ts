@@ -1,7 +1,11 @@
-import type { Address, TransactionRequestBase, TypedDataDomain } from 'viem'
+import type { Address, TypedDataDomain } from 'viem'
 import type { SafeTransactionOptionalProps } from '@safe-global/protocol-kit'
 
-import type { ChainId, SafeTransactionRequest } from '../types'
+import type {
+  ChainId,
+  SafeTransactionRequest,
+  TransactionRequest,
+} from '../types'
 
 export enum ExecutionActionType {
   EXECUTE_TRANSACTION = 'EXECUTE_TRANSACTION',
@@ -17,7 +21,7 @@ export interface ExecuteTransactionAction {
   chain: ChainId
   from: Address
 
-  transaction: TransactionRequestBase
+  transaction: TransactionRequest
 }
 
 interface TypedDataField {
