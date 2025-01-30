@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'bun:test'
 import {
-  Address,
   encodeFunctionData,
   getAddress,
   Hash,
@@ -17,9 +16,10 @@ import { typedDataForSafeTransaction } from './eip712'
 
 import { deploySafe } from '../test/avatar'
 import { testClient } from '../test/client'
+import { Address } from './types'
 
 const makeAddress = (number: number): Address =>
-  getAddress(toHex(number, { size: 20 }))
+  getAddress(toHex(number, { size: 20 })).toLowerCase() as Address
 
 const safeAbi = parseAbi([
   'function getTransactionHash(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, uint256 _nonce) view returns (bytes32)',

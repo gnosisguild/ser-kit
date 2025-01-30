@@ -1,7 +1,7 @@
-import { Address, getAddress, isAddress, zeroAddress } from 'viem'
+import { getAddress, isAddress, zeroAddress } from 'viem'
 import { chains } from './chains'
 
-import type { ChainId, PrefixedAddress } from './types'
+import type { Address, ChainId, PrefixedAddress } from './types'
 
 export function prefixAddress(
   chainId: ChainId | undefined,

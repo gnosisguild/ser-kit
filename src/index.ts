@@ -19,6 +19,7 @@ export {
 } from './execute'
 
 export {
+  type Address,
   type TransactionRequest,
   type MetaTransactionRequest,
   type SafeTransactionRequest,

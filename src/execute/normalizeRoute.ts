@@ -1,10 +1,11 @@
-import { Address, encodeFunctionData, getAddress, parseAbi } from 'viem'
+import { encodeFunctionData, getAddress, parseAbi } from 'viem'
 
 import { prefixAddress, splitPrefixedAddress } from '../addresses'
 
 import {
   Account,
   AccountType,
+  Address,
   ChainId,
   Connection,
   PrefixedAddress,

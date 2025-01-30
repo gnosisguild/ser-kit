@@ -1,4 +1,4 @@
-import { Address, Hash } from 'viem'
+import { getAddress, Hash } from 'viem'
 
 import { testClient } from './client'
 
@@ -7,6 +7,7 @@ import { prefixAddress } from '../src/addresses'
 
 import {
   AccountType,
+  Address,
   ConnectionType,
   PrefixedAddress,
   Route,
@@ -75,7 +76,7 @@ export const realRoutes = {
           type: AccountType.ROLES,
           address: '0x1cfb0cd7b1111bf2054615c7c491a15c4a3303cc',
           chain: 1,
-          multisend: ['0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761'],
+          multisend: ['0xa238cbeb142c10ef7ad8442c6d1f9e89e07e7761'],
           prefixedAddress: 'eth:0x1cfb0cd7b1111bf2054615c7c491a15c4a3303cc',
           version: 1,
         },
@@ -103,14 +104,14 @@ export const realRoutes = {
 } satisfies { [name: string]: Route }
 
 // This is default account that anvil uses
-export const testEao = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
+export const testEao = '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266'
 
 const eoaOwnsSafeWaypoints: Route['waypoints'] = [
   {
     account: {
       type: AccountType.EOA,
-      address: testEao,
-      prefixedAddress: `eoa:${testEao}`,
+      address: getAddress(testEao).toLowerCase() as Address,
+      prefixedAddress: `eoa:${testEao.toLowerCase() as Address}`,
     },
   },
   {
@@ -188,7 +189,7 @@ export function eoaRolesSafe({
   roleId,
   safe,
 }: {
-  eoa: `0x${string}`
+  eoa: Address
   roles: Address
   roleId: Hash
   safe: Address
@@ -205,10 +206,10 @@ export function eoaRolesSafe({
       {
         account: {
           type: AccountType.ROLES,
-          address: roles as `0x${string}`,
+          address: roles,
           prefixedAddress: withPrefix(roles),
           chain: testClient.chain.id,
-          multisend: [] as `0x${string}`[],
+          multisend: [] as Address[],
           version: 2,
         },
         connection: {
@@ -220,7 +221,7 @@ export function eoaRolesSafe({
       {
         account: {
           type: AccountType.SAFE,
-          address: safe as `0x${string}`,
+          address: safe,
           prefixedAddress: withPrefix(safe),
 
           chain: testClient.chain.id,
@@ -253,7 +254,7 @@ export function eoaDelaySafe({
         account: {
           type: AccountType.EOA,
           prefixedAddress: `eoa:${eoa}` as PrefixedAddress,
-          address: eoa as `0x${string}`,
+          address: eoa.toLowerCase() as Address,
         },
       },
       {
@@ -271,7 +272,7 @@ export function eoaDelaySafe({
       {
         account: {
           type: AccountType.SAFE,
-          address: safe as `0x${string}`,
+          address: safe,
           prefixedAddress: withPrefix(safe),
 
           chain: testClient.chain.id,
@@ -284,7 +285,7 @@ export function eoaDelaySafe({
       },
     ],
     id: 'test',
-    initiator: `eoa:${eoa}` as PrefixedAddress,
+    initiator: `eoa:${eoa.toLowerCase()}` as PrefixedAddress,
     avatar: withPrefix(safe),
   }
 }
@@ -296,7 +297,7 @@ export function eoaRolesDelaySafe({
   delay,
   safe,
 }: {
-  eoa: `0x${string}`
+  eoa: Address
   roles: Address
   roleId: Hash
   delay: Address
@@ -308,16 +309,16 @@ export function eoaRolesDelaySafe({
         account: {
           type: AccountType.EOA,
           prefixedAddress: `eoa:${eoa}`,
-          address: eoa as `0x${string}`,
+          address: eoa,
         },
       },
       {
         account: {
           type: AccountType.ROLES,
-          address: roles as `0x${string}`,
+          address: roles,
           prefixedAddress: withPrefix(roles),
           chain: testClient.chain.id,
-          multisend: [] as `0x${string}`[],
+          multisend: [] as Address[],
           version: 2,
         },
         connection: {
@@ -341,7 +342,7 @@ export function eoaRolesDelaySafe({
       {
         account: {
           type: AccountType.SAFE,
-          address: safe as `0x${string}`,
+          address: safe,
           prefixedAddress: withPrefix(safe),
 
           chain: testClient.chain.id,

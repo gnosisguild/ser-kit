@@ -1,7 +1,8 @@
-import type { Address, TypedDataDomain } from 'viem'
+import type { TypedDataDomain } from 'viem'
 import type { SafeTransactionOptionalProps } from '@safe-global/protocol-kit'
 
 import type {
+  Address,
   ChainId,
   SafeTransactionRequest,
   TransactionRequest,

@@ -1,11 +1,11 @@
-import { Address, createPublicClient, getAddress, http } from 'viem'
+import { createPublicClient, http } from 'viem'
 
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 
 import { chains, defaultRpc } from '../chains'
 import { prefixAddress } from '../addresses'
 
-import { ChainId, PrefixedAddress } from '../types'
+import { Address, ChainId, PrefixedAddress } from '../types'
 import { SafeTransactionProperties } from './types'
 
 export interface Options {

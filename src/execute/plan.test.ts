@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test'
-import { Address, getAddress, hashMessage, parseEther } from 'viem'
+import { getAddress, hashMessage, parseEther } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
 import { Eip1193Provider } from '@safe-global/protocol-kit'
@@ -7,7 +7,7 @@ import { OperationType } from '@safe-global/types-kit'
 
 import { prefixAddress } from '../addresses'
 
-import { MetaTransactionRequest } from '../types'
+import { Address, MetaTransactionRequest } from '../types'
 import {
   ExecutionActionType,
   ExecuteTransactionAction,
@@ -45,6 +45,8 @@ type NonceConfig = number | 'enqueue' | 'override'
 const withPrefix = (address: Address) =>
   prefixAddress(testClient.chain.id, address)
 
+const normalize = (address: any) => getAddress(address).toLowerCase() as Address
+
 describe('plan', () => {
   describe('EOA --owns--> SAFE-1/1', () => {
     it('plans and executes', async () => {
@@ -52,13 +54,13 @@ describe('plan', () => {
       const receiver = privateKeyToAccount(randomHash())
 
       const safe = await deploySafe({
-        owners: [signer.address],
+        owners: [signer.address.toLowerCase() as Address],
         creationNonce: BigInt(randomHash()),
         threshold: 1,
       })
 
       const route = eoaSafe({
-        eoa: signer.address,
+        eoa: normalize(signer.address),
         safe,
         threshold: 1,
       })
@@ -71,7 +73,7 @@ describe('plan', () => {
         [
           {
             data: '0x',
-            to: receiver.address,
+            to: normalize(receiver.address),
             value: parseEther('1'),
             operation: OperationType.Call,
           },
@@ -110,13 +112,13 @@ describe('plan', () => {
       const receiver = privateKeyToAccount(randomHash())
 
       const safe = await deploySafe({
-        owners: [signer.address],
+        owners: [normalize(signer.address)],
         creationNonce: BigInt(randomHash()),
         threshold: 1,
       })
 
       const route = eoaSafe({
-        eoa: signer.address,
+        eoa: normalize(signer.address),
         safe,
         threshold: 1,
       })
@@ -129,7 +131,7 @@ describe('plan', () => {
         [
           {
             data: '0x',
-            to: receiver.address,
+            to: normalize(receiver.address),
             value: parseEther('1'),
             operation: OperationType.Call,
           },
@@ -183,20 +185,20 @@ describe('plan', () => {
       const receiver = privateKeyToAccount(randomHash())
 
       const safe = await deploySafe({
-        owners: [signer.address],
+        owners: [normalize(signer.address)],
         creationNonce: BigInt(randomHash()),
         threshold: 1,
       })
 
       const route = eoaSafe({
-        eoa: signer.address,
+        eoa: normalize(signer.address),
         safe,
         threshold: 1,
       })
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address,
+        to: normalize(receiver.address),
         value: parseEther('1'),
         operation: OperationType.Call,
       }
@@ -225,20 +227,20 @@ describe('plan', () => {
       const receiver = privateKeyToAccount(randomHash())
 
       const safe = await deploySafe({
-        owners: [signer1.address, signer2.address],
+        owners: [normalize(signer1.address), normalize(signer2.address)],
         creationNonce: BigInt(randomHash()),
         threshold: 2,
       })
 
       const route = eoaSafe({
-        eoa: signer1.address,
+        eoa: normalize(signer1.address),
         safe,
         threshold: 2,
       })
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address,
+        to: normalize(receiver.address),
         value: parseEther('1'),
         operation: OperationType.Call,
       }
@@ -266,7 +268,7 @@ describe('plan', () => {
       const receiver = privateKeyToAccount(randomHash()).address
 
       const safe1 = await deploySafe({
-        owners: [eoa.address],
+        owners: [normalize(eoa.address)],
         threshold: 1,
         creationNonce: BigInt(randomHash()),
       })
@@ -278,7 +280,7 @@ describe('plan', () => {
       })
 
       const route = eoaSafeOwnsSafe({
-        eoa: eoa.address,
+        eoa: normalize(eoa.address),
         s1: safe1,
         s2: safe2,
       })
@@ -289,7 +291,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver,
+        to: normalize(receiver),
         value: parseEther('1'),
         operation: OperationType.Call,
       }
@@ -321,7 +323,7 @@ describe('plan', () => {
       const receiver = privateKeyToAccount(randomHash()).address
 
       const safe1 = await deploySafe({
-        owners: [eoa.address],
+        owners: [normalize(eoa.address)],
         threshold: 1,
         creationNonce: BigInt(randomHash()),
       })
@@ -333,7 +335,7 @@ describe('plan', () => {
       })
 
       const route = eoaSafeOwnsSafe({
-        eoa: eoa.address,
+        eoa: normalize(eoa.address),
         s1: safe1,
         s2: safe2,
       })
@@ -349,7 +351,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver,
+        to: normalize(receiver),
         value: parseEther('1'),
         operation: OperationType.Call,
       }
@@ -420,13 +422,13 @@ describe('plan', () => {
       const receiver = privateKeyToAccount(randomHash())
 
       const safe1 = await deploySafe({
-        owners: [eoa.address],
+        owners: [normalize(eoa.address)],
         threshold: 1,
         creationNonce: BigInt(randomHash()),
       })
 
       const safe2 = await deploySafe({
-        owners: [someoneelse.address],
+        owners: [normalize(someoneelse.address)],
         threshold: 1,
         creationNonce: BigInt(randomHash()),
       })
@@ -445,7 +447,7 @@ describe('plan', () => {
       })
 
       const route = eoaSafeMemberOfSafe({
-        eoa: eoa.address,
+        eoa: normalize(eoa.address),
         s1: safe1,
         s2: safe2,
       })
@@ -456,7 +458,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address,
+        to: normalize(receiver.address),
         value: parseEther('1'),
         operation: OperationType.Call,
       }
@@ -491,13 +493,13 @@ describe('plan', () => {
       const receiver = privateKeyToAccount(randomHash())
 
       const safe1 = await deploySafe({
-        owners: [eoa.address],
+        owners: [normalize(eoa.address)],
         threshold: 1,
         creationNonce: BigInt(randomHash()),
       })
 
       const safe2 = await deploySafe({
-        owners: [someoneelse.address],
+        owners: [normalize(someoneelse.address)],
         threshold: 1,
         creationNonce: BigInt(randomHash()),
       })
@@ -522,7 +524,7 @@ describe('plan', () => {
       })
 
       const route = eoaSafeMemberOfSafe({
-        eoa: eoa.address,
+        eoa: normalize(eoa.address),
         s1: safe1,
         s2: safe2,
       })
@@ -541,7 +543,7 @@ describe('plan', () => {
         [
           {
             data: '0x',
-            to: receiver.address,
+            to: normalize(receiver.address),
             value: parseEther('1'),
             operation: OperationType.Call,
           },
@@ -595,7 +597,7 @@ describe('plan', () => {
       const receiver = privateKeyToAccount(randomHash())
 
       const safe = await deploySafe({
-        owners: [owner.address],
+        owners: [normalize(owner.address)],
         threshold: 1,
         creationNonce: BigInt(randomHash()),
       })
@@ -605,8 +607,8 @@ describe('plan', () => {
       const { roles, roleId } = await setupRolesMod({
         owner: owner,
         avatar: safe,
-        member: member.address,
-        destination: receiver.address,
+        member: normalize(member.address),
+        destination: normalize(receiver.address),
       })
 
       await enableModuleInSafe({ safe, owner, module: roles })
@@ -620,7 +622,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address,
+        to: normalize(receiver.address),
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }
@@ -664,7 +666,7 @@ describe('plan', () => {
       const receiver = privateKeyToAccount(randomHash())
 
       const safe = await deploySafe({
-        owners: [owner.address],
+        owners: [normalize(owner.address)],
         threshold: 1,
         creationNonce: BigInt(randomHash()),
       })
@@ -674,8 +676,8 @@ describe('plan', () => {
       const { roles, roleId } = await setupRolesMod({
         owner: owner,
         avatar: safe,
-        member: member.address,
-        destination: receiver.address,
+        member: normalize(member.address),
+        destination: normalize(receiver.address),
       })
 
       await enableModuleInSafe({ safe, owner, module: roles })
@@ -689,7 +691,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address,
+        to: normalize(receiver.address),
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }
@@ -734,7 +736,7 @@ describe('plan', () => {
       const someone = privateKeyToAccount(randomHash())
 
       const safe = await deploySafe({
-        owners: [owner.address],
+        owners: [normalize(owner.address)],
         threshold: 1,
         creationNonce: BigInt(randomHash()),
       })
@@ -751,23 +753,27 @@ describe('plan', () => {
       const cooldown = 100
 
       const delay = await deployDelayMod({
-        owner: owner.address,
+        owner: normalize(owner.address),
         avatar: safe,
         cooldown,
       })
 
-      await enableModule({ owner, module: delay, moduleToEnable: eoa.address })
+      await enableModule({
+        owner,
+        module: delay,
+        moduleToEnable: normalize(eoa.address),
+      })
       await enableModuleInSafe({ owner, safe, module: delay })
 
       const route = eoaDelaySafe({
-        eoa: eoa.address,
+        eoa: normalize(eoa.address),
         delay,
         safe,
       })
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address,
+        to: normalize(receiver.address),
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }
@@ -831,7 +837,7 @@ describe('plan', () => {
       const someone = privateKeyToAccount(randomHash())
 
       const safe = await deploySafe({
-        owners: [owner.address],
+        owners: [normalize(owner.address)],
         threshold: 1,
         creationNonce: BigInt(randomHash()),
       })
@@ -846,23 +852,27 @@ describe('plan', () => {
       const cooldown = 100
 
       const delay = await deployDelayMod({
-        owner: owner.address,
+        owner: normalize(owner.address),
         avatar: safe,
         cooldown,
       })
 
-      await enableModule({ owner, module: delay, moduleToEnable: eoa.address })
+      await enableModule({
+        owner,
+        module: delay,
+        moduleToEnable: normalize(eoa.address),
+      })
       await enableModuleInSafe({ owner, safe, module: delay })
 
       const route = eoaDelaySafe({
-        eoa: eoa.address,
+        eoa: normalize(eoa.address),
         delay,
         safe,
       })
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address,
+        to: normalize(receiver.address),
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }
@@ -930,7 +940,7 @@ describe('plan', () => {
       await fund([owner.address, member.address, someone.address])
 
       const safe1 = await deploySafe({
-        owners: [owner.address],
+        owners: [normalize(owner.address)],
         threshold: 1,
         creationNonce: BigInt(randomHash()),
       })
@@ -946,7 +956,7 @@ describe('plan', () => {
       const { roles, roleId } = await setupRolesMod({
         owner: owner,
         avatar: safe1,
-        member: member.address,
+        member: normalize(member.address),
         destination: safe2,
       })
 
@@ -957,7 +967,7 @@ describe('plan', () => {
       })
 
       const route = eoaRolesSafeOwnsSafe({
-        eoa: member.address,
+        eoa: normalize(member.address),
         roles,
         roleId,
         safe1,
@@ -966,7 +976,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address,
+        to: normalize(receiver.address),
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }
@@ -1016,7 +1026,7 @@ describe('plan', () => {
       await fund([owner.address, member.address, someone.address])
 
       const safe1 = await deploySafe({
-        owners: [owner.address],
+        owners: [normalize(owner.address)],
         threshold: 1,
         creationNonce: BigInt(hashMessage('6')),
       })
@@ -1032,7 +1042,7 @@ describe('plan', () => {
       const { roles, roleId } = await setupRolesMod({
         owner: owner,
         avatar: safe1,
-        member: member.address,
+        member: normalize(member.address),
         destination: safe2,
       })
 
@@ -1043,7 +1053,7 @@ describe('plan', () => {
       })
 
       const route = eoaRolesSafeOwnsSafe({
-        eoa: member.address,
+        eoa: normalize(member.address),
         roles,
         roleId,
         safe1,
@@ -1052,7 +1062,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address,
+        to: normalize(receiver.address),
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }
@@ -1113,7 +1123,7 @@ describe('plan', () => {
       const someone = privateKeyToAccount(randomHash())
 
       const safe = await deploySafe({
-        owners: [owner.address],
+        owners: [normalize(owner.address)],
         threshold: 1,
         creationNonce: BigInt(randomHash()),
       })
@@ -1127,7 +1137,7 @@ describe('plan', () => {
 
       const cooldown = 100
       const delay = await deployDelayMod({
-        owner: owner.address,
+        owner: normalize(owner.address),
         avatar: safe,
         target: safe,
         cooldown,
@@ -1137,8 +1147,8 @@ describe('plan', () => {
         owner,
         avatar: safe,
         target: delay,
-        member: eoa.address,
-        destination: receiver.address,
+        member: normalize(eoa.address),
+        destination: normalize(receiver.address),
       })
 
       await enableModule({ owner, module: delay, moduleToEnable: roles })
@@ -1154,7 +1164,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address,
+        to: normalize(receiver.address),
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }
@@ -1214,7 +1224,7 @@ describe('plan', () => {
       const someone = privateKeyToAccount(randomHash())
 
       const safe = await deploySafe({
-        owners: [owner.address],
+        owners: [normalize(owner.address)],
         threshold: 1,
         creationNonce: BigInt(randomHash()),
       })
@@ -1228,7 +1238,7 @@ describe('plan', () => {
 
       const cooldown = 100
       const delay = await deployDelayMod({
-        owner: owner.address,
+        owner: normalize(owner.address),
         avatar: safe,
         target: safe,
         cooldown,
@@ -1238,8 +1248,8 @@ describe('plan', () => {
         owner,
         avatar: safe,
         target: delay,
-        member: eoa.address,
-        destination: receiver.address,
+        member: normalize(eoa.address),
+        destination: normalize(receiver.address),
       })
 
       await enableModule({ owner, module: delay, moduleToEnable: roles })
@@ -1255,7 +1265,7 @@ describe('plan', () => {
 
       const transaction: MetaTransactionRequest = {
         data: '0x',
-        to: receiver.address,
+        to: normalize(receiver.address),
         value: parseEther('0.123'),
         operation: OperationType.Call,
       }

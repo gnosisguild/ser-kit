@@ -1,8 +1,6 @@
 import {
-  Address,
   encodeFunctionData,
   getAddress,
-  Hex,
   parseAbi,
   toHex,
   zeroAddress,
@@ -22,6 +20,7 @@ import {
 import { deployer, testClient } from './client'
 
 import { createPreApprovedSignature } from '../src/execute/signatures'
+import { Address } from '../src'
 
 export async function deploySafe({
   owners,
@@ -174,7 +173,7 @@ async function calculateAddress({
   creationNonce: bigint | number
   safeVersion?: SafeVersion
   provider: Eip1193Provider
-}) {
+}): Promise<Address> {
   const predictedSafe: PredictedSafeProps = {
     safeAccountConfig: { owners, threshold: Number(threshold) },
     safeDeploymentConfig: {
@@ -188,7 +187,7 @@ async function calculateAddress({
     provider: testClient as Eip1193Provider,
   })
 
-  return getAddress(await safe.getAddress())
+  return getAddress(await safe.getAddress()).toLowerCase() as Address
 }
 
 export const safeAbi = parseAbi([

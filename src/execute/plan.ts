@@ -1,4 +1,10 @@
-import { decodeFunctionData, hashTypedData, parseAbi, zeroAddress } from 'viem'
+import {
+  decodeFunctionData,
+  getAddress,
+  hashTypedData,
+  parseAbi,
+  zeroAddress,
+} from 'viem'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 
 import { createPreApprovedSignature } from './signatures'
@@ -25,6 +31,7 @@ import {
 
 import {
   AccountType,
+  Address,
   ChainId,
   Connection,
   ConnectionType,
@@ -49,7 +56,7 @@ interface Options {
     [chainId in ChainId]?: string | Eip1193Provider
   }
   /** Allows customizing the multi-send contract address */
-  multiSend?: `0x${string}`
+  multiSend?: Address
 }
 
 /**
@@ -428,7 +435,7 @@ function unwrapExecuteTransaction(
   })
 
   return {
-    to: to! as `0x${string}`,
+    to: getAddress(to).toLowerCase() as Address,
     value: value!,
     data: data!,
     operation,

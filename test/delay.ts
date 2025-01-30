@@ -1,8 +1,9 @@
-import { Address, encodeFunctionData, parseAbi, PrivateKeyAccount } from 'viem'
+import { encodeFunctionData, parseAbi, PrivateKeyAccount } from 'viem'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 import { deployProxy } from '@gnosis-guild/zodiac-core'
 
 import { randomHash, testClient } from './client'
+import { Address } from '../src'
 
 export async function deployDelayMod({
   owner,
@@ -29,7 +30,7 @@ export async function deployDelayMod({
     provider: testClient as Eip1193Provider,
   })
 
-  return address
+  return address.toLowerCase() as Address
 }
 
 export async function enableModule({

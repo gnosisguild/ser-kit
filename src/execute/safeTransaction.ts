@@ -1,11 +1,5 @@
 import { invariant } from '@epic-web/invariant'
-import {
-  Address,
-  encodeFunctionData,
-  getAddress,
-  parseAbi,
-  zeroAddress,
-} from 'viem'
+import { encodeFunctionData, getAddress, parseAbi, zeroAddress } from 'viem'
 import SafeApiKit from '@safe-global/api-kit'
 import { OperationType } from '@safe-global/types-kit'
 
@@ -13,6 +7,7 @@ import { prefixAddress } from '../addresses'
 import { getEip1193Provider, nonceConfig, Options } from './options'
 
 import {
+  Address,
   ChainId,
   MetaTransactionRequest,
   SafeTransactionRequest,
@@ -40,8 +35,10 @@ export async function prepareSafeTransaction({
     safeTxGas: BigInt(defaults?.safeTxGas || 0),
     baseGas: BigInt(defaults?.baseGas || 0),
     gasPrice: BigInt(defaults?.gasPrice || 0),
-    gasToken: getAddress(defaults?.gasToken || zeroAddress),
-    refundReceiver: getAddress(defaults?.refundReceiver || zeroAddress),
+    gasToken: getAddress(defaults?.gasToken || zeroAddress) as Address,
+    refundReceiver: getAddress(
+      defaults?.refundReceiver || zeroAddress
+    ).toLowerCase() as Address,
     nonce: await nonce({ chainId, safe, options }),
   }
 }
