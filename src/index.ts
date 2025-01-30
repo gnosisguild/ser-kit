@@ -1,7 +1,7 @@
 export {
-  formatPrefixedAddress,
+  prefixAddress,
+  unprefixAddress,
   splitPrefixedAddress,
-  parsePrefixedAddress,
 } from './addresses'
 
 export { chains } from './chains'
