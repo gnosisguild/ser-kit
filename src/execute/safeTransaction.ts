@@ -1,3 +1,4 @@
+import { invariant } from '@epic-web/invariant'
 import {
   Address,
   encodeFunctionData,
@@ -8,16 +9,14 @@ import {
 import SafeApiKit from '@safe-global/api-kit'
 import { OperationType } from '@safe-global/types-kit'
 
-import { formatPrefixedAddress } from '../addresses'
+import { prefixAddress } from '../addresses'
 import { getEip1193Provider, nonceConfig, Options } from './options'
 
 import {
   ChainId,
   MetaTransactionRequest,
-  PrefixedAddress,
   SafeTransactionRequest,
 } from '../types'
-import { invariant } from '@epic-web/invariant'
 
 export async function prepareSafeTransaction({
   chainId,
@@ -30,12 +29,8 @@ export async function prepareSafeTransaction({
   transaction: MetaTransactionRequest
   options?: Options
 }): Promise<SafeTransactionRequest> {
-  const key1 = formatPrefixedAddress(chainId, safe)
-  const key2 = key1.toLowerCase() as PrefixedAddress
-
   const defaults =
-    options?.safeTransactionProperties?.[key1] ||
-    options?.safeTransactionProperties?.[key2]
+    options?.safeTransactionProperties?.[prefixAddress(chainId, safe)]
 
   return {
     to: transaction.to,
