@@ -1,4 +1,9 @@
-import { encodeFunctionData, getAddress, parseAbi, PrivateKeyAccount } from 'viem'
+import {
+  encodeFunctionData,
+  getAddress,
+  parseAbi,
+  PrivateKeyAccount,
+} from 'viem'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 import { deployProxy } from '@gnosis-guild/zodiac-core'
 
