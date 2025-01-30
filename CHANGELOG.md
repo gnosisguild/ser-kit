@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.0.0](https://github.com/gnosisguild/ser-kit/compare/v1.1.0...v2.0.0) (2025-01-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* `formatPrefixedAddress` renamed to `prefixAddress`
+* `parsePrefixedAddress` renamed to `unprefixAddress`
+* generally handle addresses in lowercase representation ([#35](https://github.com/gnosisguild/ser-kit/issues/35))
+
+### Bug Fixes
+
+* generally handle addresses in lowercase representation ([#35](https://github.com/gnosisguild/ser-kit/issues/35)) ([ea31896](https://github.com/gnosisguild/ser-kit/commit/ea31896b99bbfa564281f0cf9b0af245b454fc4c)), closes [#31](https://github.com/gnosisguild/ser-kit/issues/31)
+* narrow `TransactionRequest` type to indicate it's serializable ([#33](https://github.com/gnosisguild/ser-kit/issues/33)) ([946b81b](https://github.com/gnosisguild/ser-kit/commit/946b81b80106bb96ebe9a73e0614a314ac0e81b0)), closes [#32](https://github.com/gnosisguild/ser-kit/issues/32)
+
+
+### Miscellaneous Chores
+
+* `formatPrefixedAddress` renamed to `prefixAddress` ([ea31896](https://github.com/gnosisguild/ser-kit/commit/ea31896b99bbfa564281f0cf9b0af245b454fc4c))
+* `parsePrefixedAddress` renamed to `unprefixAddress` ([ea31896](https://github.com/gnosisguild/ser-kit/commit/ea31896b99bbfa564281f0cf9b0af245b454fc4c))
+
 ## [1.1.0](https://github.com/gnosisguild/ser-kit/compare/v1.0.7...v1.1.0) (2025-01-09)
 
 
