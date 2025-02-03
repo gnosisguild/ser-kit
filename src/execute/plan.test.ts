@@ -7,7 +7,12 @@ import { OperationType } from '@safe-global/types-kit'
 
 import { prefixAddress } from '../addresses'
 
-import { Address, MetaTransactionRequest } from '../types'
+import {
+  AccountType,
+  Address,
+  ConnectionType,
+  MetaTransactionRequest,
+} from '../types'
 import {
   ExecutionActionType,
   ExecuteTransactionAction,
@@ -1324,6 +1329,72 @@ describe('plan', () => {
       expect(
         await testClient.getBalance({ address: receiver.address })
       ).toEqual(parseEther('0.123'))
+    })
+  })
+
+  describe('regression tests', () => {
+    it('does not revert when encoding a call through a role', async () => {
+      const plan = await planExecution(
+        [
+          {
+            to: '0x03a520b32c04bf3beef7beb72e919cf822ed34f1',
+            data: '0x88316456000000000000000000000000420000000000000000000000000000000000000600000000000000000000000064fcc3a02eeeba05ef701b7eed066c6ebd5d4e510000000000000000000000000000000000000000000000000000000000002710000000000000000000000000000000000000000000000000000000000001932000000000000000000000000000000000000000000000000000000000000197d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008ed053c68aff19ebfffa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008ed053c68aff19ebfffa000000000000000000000000c868bfb240ed207449afe71d2ecc781d5e10c85c0000000000000000000000000000000000000000000000000000000067a0dd9e',
+            value: 0n,
+            operation: 0,
+          },
+        ],
+        {
+          id: 'raQXbvyUOMTNuaS7RxkMp',
+          avatar: 'base:0xc868bfb240ed207449afe71d2ecc781d5e10c85c',
+          initiator: 'eoa:0x59e608e4842162480591032f3c8b0ae55c98d104',
+          waypoints: [
+            {
+              account: {
+                type: AccountType.EOA,
+                address: '0x59e608e4842162480591032f3c8b0ae55c98d104',
+                prefixedAddress:
+                  'eoa:0x59e608e4842162480591032f3c8b0ae55c98d104',
+              },
+            },
+            {
+              account: {
+                type: AccountType.ROLES,
+                address: '0x118d0658e5d4b52d1589b3683d6b11c3a2102537',
+                prefixedAddress:
+                  'base:0x118d0658e5d4b52d1589b3683d6b11c3a2102537',
+                chain: 8453,
+                multisend: [
+                  '0x38869bf66a61cf6bdb996a6ae40d5853fd43b526',
+                  '0x9641d764fc13c8b624c04430c7356c1c7c8102e2',
+                ],
+                version: 1,
+              },
+              connection: {
+                type: ConnectionType.IS_MEMBER,
+                roles: [
+                  '0x6d616e616765725f776574685f62617365000000000000000000000000000000',
+                ],
+                from: 'eoa:0x59e608e4842162480591032f3c8b0ae55c98d104',
+              },
+            },
+            {
+              account: {
+                type: AccountType.SAFE,
+                address: '0xc868bfb240ed207449afe71d2ecc781d5e10c85c',
+                prefixedAddress:
+                  'base:0xc868bfb240ed207449afe71d2ecc781d5e10c85c',
+                chain: 8453,
+                threshold: null as unknown as number, // TODO we should declare that this can be null
+              },
+              connection: {
+                type: ConnectionType.IS_ENABLED,
+                from: 'base:0x118d0658e5d4b52d1589b3683d6b11c3a2102537',
+              },
+            },
+          ],
+        }
+      )
+      expect(plan).toHaveLength(1)
     })
   })
 })
