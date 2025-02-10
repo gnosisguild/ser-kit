@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/gnosisguild/ser-kit/compare/v2.0.0...v2.0.1) (2025-02-09)
+
+
+### Bug Fixes
+
+* api base url ([#37](https://github.com/gnosisguild/ser-kit/issues/37)) ([6901e1d](https://github.com/gnosisguild/ser-kit/commit/6901e1d84ac5e7fa023beaa1e8bef27e2458f0a9))
+
 ## [2.0.0](https://github.com/gnosisguild/ser-kit/compare/v1.1.0...v2.0.0) (2025-01-30)
 
 
