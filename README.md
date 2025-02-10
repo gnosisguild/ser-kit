@@ -21,7 +21,7 @@ Features:
 ## Usage
 
 ```ts
-import { queryRoutes, rankRoutes, encodeExecution } from 'ser-kit'
+import { queryRoutes, rankRoutes, planExecution, execute } from 'ser-kit'
 
 // 1. retrieve all execution routes from `eoaSignerAddress` as initiator, controlling `safeAddress` as avatar
 const routes = await queryRoutes(eoaSignerAddress, safeAddress)
