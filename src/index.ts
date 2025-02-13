@@ -6,7 +6,7 @@ export {
 
 export { chains } from './chains'
 
-export { queryRoutes, queryAvatars, queryInitiators } from './query'
+export { queryRoutes, queryAvatars, queryInitiators, rankRoutes } from './query'
 
 export {
   planExecution,

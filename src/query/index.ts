@@ -2,6 +2,7 @@ import { unprefixAddress } from '../addresses'
 import type { Address, PrefixedAddress, Route } from '../types'
 
 export { calculateRouteId } from './routes'
+export { rankRoutes } from './rank'
 
 const SER_API_BASE = 'https://ser.gnosisguild.org'
 
