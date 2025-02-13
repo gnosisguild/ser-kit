@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.0.0](https://github.com/gnosisguild/ser-kit/compare/v2.0.1...v3.0.0) (2025-02-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* `queryAvatars` does **not** return a list of routes anymore, but a list of prefixed addresses
+* `queryInitiators` does **not** return a list of routes anymore, but a list of addresses
+
+### Features
+
+* adds export for the `rankRoutes` method ([09d7a29](https://github.com/gnosisguild/ser-kit/commit/09d7a29bd1cb82b4bc1d50ce311f4ff20fe8115c))
+
+
+### Bug Fixes
+
+* `queryAvatars` does **not** return a list of routes anymore, but a list of prefixed addresses ([09d7a29](https://github.com/gnosisguild/ser-kit/commit/09d7a29bd1cb82b4bc1d50ce311f4ff20fe8115c))
+* `queryInitiators` does **not** return a list of routes anymore, but a list of addresses ([09d7a29](https://github.com/gnosisguild/ser-kit/commit/09d7a29bd1cb82b4bc1d50ce311f4ff20fe8115c))
+
 ## [2.0.1](https://github.com/gnosisguild/ser-kit/compare/v2.0.0...v2.0.1) (2025-02-09)
 
 
