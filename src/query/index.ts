@@ -1,4 +1,5 @@
-import type { PrefixedAddress, Route } from '../types'
+import { unprefixAddress } from '../addresses'
+import type { Address, PrefixedAddress, Route } from '../types'
 
 export { calculateRouteId } from './routes'
 
@@ -25,9 +26,11 @@ export const queryRoutes = async (
 
 export const queryAvatars = async (
   initiator: `0x${string}`
-): Promise<Route[]> => {
+): Promise<PrefixedAddress[]> => {
   // in the future we might also include routes to other avatars, such as ERC6551 token-bound accounts
-  return await fetchRoutes(`${SER_API_BASE}/safes/${initiator}`)
+  const routes = await fetchRoutes(`${SER_API_BASE}/safes/${initiator}`)
+
+  return Array.from(new Set(routes.map((route) => route.avatar)))
 }
 
 export const queryInitiators = async (
