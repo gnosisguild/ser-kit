@@ -35,6 +35,10 @@ export const queryAvatars = async (
 
 export const queryInitiators = async (
   avatar: PrefixedAddress
-): Promise<Route[]> => {
-  return await fetchRoutes(`${SER_API_BASE}/initiators/${avatar}`)
+): Promise<Address[]> => {
+  const routes = await fetchRoutes(`${SER_API_BASE}/initiators/${avatar}`)
+
+  return Array.from(
+    new Set(routes.map((route) => unprefixAddress(route.initiator)))
+  )
 }
