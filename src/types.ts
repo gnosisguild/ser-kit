@@ -70,7 +70,7 @@ export interface Delay {
   chain: ChainId
 }
 
-type Contract = Safe | Roles | Delay
+export type Contract = Safe | Roles | Delay
 
 export type Account = Eoa | Contract
 
