@@ -34,6 +34,7 @@ export {
   type PrefixedAddress,
   AccountType,
   type Account,
+  type Contract,
   ConnectionType,
   type Connection,
   type StartingPoint,
