@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.1.0](https://github.com/gnosisguild/ser-kit/compare/v3.0.0...v3.1.0) (2025-02-17)
+
+
+### Features
+
+* export `calculateRouteId` ([#43](https://github.com/gnosisguild/ser-kit/issues/43)) ([0667504](https://github.com/gnosisguild/ser-kit/commit/06675047cc5758efe54d7382d9f8a7779b97c6bc))
+* export type `Contract` ([#45](https://github.com/gnosisguild/ser-kit/issues/45)) ([441a43a](https://github.com/gnosisguild/ser-kit/commit/441a43abcd2e9f69074602112f1fe774ca5cc7df))
+
 ## [3.0.0](https://github.com/gnosisguild/ser-kit/compare/v2.0.1...v3.0.0) (2025-02-13)
 
 
