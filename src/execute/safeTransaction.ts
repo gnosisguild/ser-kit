@@ -109,7 +109,7 @@ async function fetchQueueNonce({
 }): Promise<number> {
   const apiKit = initApiKit(chainId)
 
-  const nonce = await apiKit.getNextNonce(safe)
+  const nonce = await apiKit.getNextNonce(getAddress(safe))
 
   return nonce
 }
