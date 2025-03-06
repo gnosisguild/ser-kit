@@ -9,11 +9,16 @@ import type {
 } from '../types'
 
 export enum ExecutionActionType {
+  /** Execute a transaction using `eth_sendTransaction` */
   EXECUTE_TRANSACTION = 'EXECUTE_TRANSACTION',
+  /** Execute a Safe transaction by calling the Safe contract's `execTransaction` function */
   SAFE_TRANSACTION = 'SAFE_TRANSACTION',
+  /** Propose a transaction to the Safe Transaction Service */
   PROPOSE_TRANSACTION = 'PROPOSE_TRANSACTION',
-  SIGN_MESSAGE = 'SIGN_MESSAGE',
+  /** Sign a typed data object using `eth_signTypedData_v4` */
   SIGN_TYPED_DATA = 'SIGN_TYPED_DATA',
+
+  // SIGN_MESSAGE = 'SIGN_MESSAGE',
 }
 
 /** Represents a transaction to be sent from the specified account */
