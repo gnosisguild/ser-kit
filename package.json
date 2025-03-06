@@ -23,7 +23,7 @@
     "prepublishOnly": "bun run build",
     "check:format": "prettier --list-different .",
     "fix:format": "prettier --write .",
-    "anvil": "anvil --port 8553 --fork-url https://virtual.mainnet.rpc.tenderly.co/65b2a366-4d33-4580-a244-e6bcf0696554",
+    "anvil": "anvil --port 8553 --fork-url https://virtual.mainnet.rpc.tenderly.co/c794f080-0bdc-4702-aa8b-5c1a3e097a60",
     "test": "bun test --timeout 10000"
   },
   "devDependencies": {
