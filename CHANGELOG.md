@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.0](https://github.com/gnosisguild/ser-kit/compare/v3.1.1...v3.2.0) (2025-03-07)
+
+
+### Features
+
+* check role permissions ([#51](https://github.com/gnosisguild/ser-kit/issues/51)) ([c6ccf18](https://github.com/gnosisguild/ser-kit/commit/c6ccf180c5274b70df3feafe7a35189a3e017e2e))
+
 ## [3.1.1](https://github.com/gnosisguild/ser-kit/compare/v3.1.0...v3.1.1) (2025-02-19)
 
 
