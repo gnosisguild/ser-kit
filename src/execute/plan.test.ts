@@ -847,7 +847,7 @@ describe('plan', () => {
     })
   })
 
-  describe.only('EOA --member--> ROLES --enabled--> SAFE*/* --owns--> SAFE1/1', () => {
+  describe('EOA --member--> ROLES --enabled--> SAFE*/* --owns--> SAFE1/1', () => {
     it('plans and executes', async () => {
       const owner = privateKeyToAccount(randomHash())
       const member = privateKeyToAccount(randomHash())
