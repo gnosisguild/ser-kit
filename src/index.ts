@@ -19,6 +19,8 @@ export {
   execute,
   encodeMultiSend,
   ExecutionActionType,
+  checkPermissions,
+  PermissionViolation,
   type ExecutionAction,
   type ExecutionPlan,
   type ExecutionState,
