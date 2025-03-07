@@ -1,3 +1,4 @@
+import { invariant } from '@epic-web/invariant'
 import {
   decodeFunctionData,
   getAddress,
@@ -16,6 +17,7 @@ import { splitPrefixedAddress } from '../addresses'
 import { typedDataForSafeTransaction } from '../eip712'
 
 import encodeApproveHash from '../encode/approveHash'
+import encodeExecTransaction from '../encode/execTransaction'
 import encodeExecTransactionFromModule from '../encode/execTransactionFromModule'
 import encodeExecTransactionWithRole from '../encode/execTransactionWithRole'
 import encodeExecuteNextTxData from '../encode/executeNextTx'
@@ -43,7 +45,6 @@ import {
   type Route,
   type Waypoint,
 } from '../types'
-import { invariant } from '@epic-web/invariant'
 
 export interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
@@ -247,6 +248,30 @@ const planAsSafe = async (
   const isUpstreamModule = connection?.type == ConnectionType.IS_ENABLED
 
   if (isUpstreamOwner) {
+    if (shouldExecute(waypoint, options)) {
+      return [
+        {
+          type: ExecutionActionType.EXECUTE_TRANSACTION,
+          chain: waypoint.account.chain,
+          from: left?.account.address!,
+          transaction: {
+            to: waypoint.account.address,
+            data: encodeExecTransaction({
+              safeTransaction: await prepareSafeTransaction({
+                chainId: waypoint.account.chain,
+                safe: waypoint.account.address,
+                transaction,
+                options,
+              }),
+              signature: createPreApprovedSignature(left?.account.address!),
+            }),
+            value: 0n,
+          },
+        },
+        ...result,
+      ]
+    }
+
     return [
       {
         type: shouldPropose(waypoint, options)
@@ -403,6 +428,19 @@ const planAsDelay = async (
       },
     },
   ]
+}
+
+function shouldExecute(waypoint: Waypoint | StartingPoint, options?: Options) {
+  invariant(
+    waypoint.account.type == AccountType.SAFE,
+    `Expected account type to be "${AccountType.SAFE}" but got "${waypoint.account.type}"`
+  )
+  const safeTransactionProperties =
+    options?.safeTransactionProperties?.[waypoint.account.prefixedAddress]
+
+  const proposeOnly = !!safeTransactionProperties?.proposeOnly
+  const canExecute = waypoint.account.threshold === 1
+  return !proposeOnly && canExecute
 }
 
 function shouldPropose(waypoint: Waypoint | StartingPoint, options?: Options) {
