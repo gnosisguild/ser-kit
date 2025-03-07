@@ -45,7 +45,7 @@ import {
 } from '../types'
 import { invariant } from '@epic-web/invariant'
 
-interface Options {
+export interface Options {
   /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
   roles?: { [rolesMod: PrefixedAddress]: string }
   /** Allows overriding the default transaction properties for any Safe node in the route that is connected through an OWNS connection. */
