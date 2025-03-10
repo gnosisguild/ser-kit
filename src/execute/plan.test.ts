@@ -8,12 +8,7 @@ import { OperationType } from '@safe-global/types-kit'
 import { prefixAddress } from '../addresses'
 
 import { Address, MetaTransactionRequest } from '../types'
-import {
-  ExecutionActionType,
-  ExecuteTransactionAction,
-  SafeTransactionAction,
-  SignTypedDataAction,
-} from './types'
+import { ExecutionActionType, ExecuteTransactionAction } from './types'
 
 import { setupRolesMod } from '../../test/roles'
 import { deployDelayMod, enableModule } from '../../test/delay'
@@ -69,12 +64,14 @@ describe('plan', () => {
 
       const chainId = testClient.chain.id
 
+      const sent = parseEther('0.23456')
+
       const plan = await planExecution(
         [
           {
             data: '0x',
             to: normalize(receiver.address),
-            value: parseEther('1'),
+            value: sent,
             operation: OperationType.Call,
           },
         ],
@@ -103,8 +100,8 @@ describe('plan', () => {
 
       expect(
         await testClient.getBalance({ address: receiver.address })
-      ).toEqual(parseEther('1'))
-      expect(state).toHaveLength(2)
+      ).toEqual(sent)
+      expect(state).toHaveLength(1)
     })
 
     it('plans and executes independently', async () => {
@@ -123,16 +120,20 @@ describe('plan', () => {
         threshold: 1,
       })
 
-      await fund([[safe, parseEther('2')]])
+      await fund([
+        [safe, parseEther('2')],
+        [signer.address, parseEther('2')],
+      ])
 
       const chainId = testClient.chain.id
 
+      const SENT = parseEther('0.03443')
       const plan = await planExecution(
         [
           {
             data: '0x',
             to: normalize(receiver.address),
-            value: parseEther('1'),
+            value: SENT,
             operation: OperationType.Call,
           },
         ],
@@ -149,35 +150,24 @@ describe('plan', () => {
         }
       )
 
-      expect(plan).toHaveLength(2)
+      expect(plan).toHaveLength(1)
 
-      let [sign, execute] = plan as [SignTypedDataAction, SafeTransactionAction]
+      let [execute] = plan as [ExecuteTransactionAction]
 
-      expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
-      expect(execute.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
-
-      const signature = await signer.signTypedData(sign.typedData)
-
-      const transaction = {
-        to: execute.safe,
-        data: await encodeExecTransaction({
-          safeTransaction: execute.safeTransaction,
-          signature,
-        }),
-      }
+      expect(execute.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
 
       expect(
         await testClient.getBalance({ address: receiver.address })
       ).toEqual(0n)
 
       await testClient.sendTransaction({
-        account: deployer,
-        ...transaction,
+        account: signer,
+        ...execute.transaction,
       })
 
       expect(
         await testClient.getBalance({ address: receiver.address })
-      ).toEqual(parseEther('1'))
+      ).toEqual(SENT)
     })
 
     it('plans proposal with signature, when proposeOnly', async () => {
@@ -289,10 +279,11 @@ describe('plan', () => {
 
       const chainId = testClient.chain.id
 
+      const SENT = parseEther('0.0047364736476')
       const transaction: MetaTransactionRequest = {
         data: '0x',
         to: normalize(receiver),
-        value: parseEther('1'),
+        value: SENT,
         operation: OperationType.Call,
       }
 
@@ -305,8 +296,6 @@ describe('plan', () => {
         },
       })
 
-      expect(plan).toHaveLength(3)
-
       const state: any[] = []
 
       // Except the receiver to have 0, and afterwards 1
@@ -314,9 +303,7 @@ describe('plan', () => {
       await execute(plan, state, testClient as Eip1193Provider, {
         getWalletClient: () => testClientWithAccount(eoa) as any,
       })
-      expect(await testClient.getBalance({ address: receiver })).toEqual(
-        parseEther('1')
-      )
+      expect(await testClient.getBalance({ address: receiver })).toEqual(SENT)
     })
     it('plans and executes independently', async () => {
       const eoa = privateKeyToAccount(randomHash())
@@ -340,19 +327,14 @@ describe('plan', () => {
         s2: safe2,
       })
 
-      // fund the safe with 2 eth
-      await testClient.sendTransaction({
-        account: deployer,
-        to: safe2,
-        value: parseEther('2'),
-      })
+      await fund([eoa.address, [safe2, parseEther('2')]])
 
       const chainId = testClient.chain.id
-
+      const SENT = parseEther('0.0047364736476')
       const transaction: MetaTransactionRequest = {
         data: '0x',
         to: normalize(receiver),
-        value: parseEther('1'),
+        value: SENT,
         operation: OperationType.Call,
       }
 
@@ -365,53 +347,17 @@ describe('plan', () => {
         },
       })
 
-      expect(plan).toHaveLength(3)
-
-      let [sign, execute1, execute2] = plan as [
-        SignTypedDataAction,
-        SafeTransactionAction,
-        SafeTransactionAction,
-      ]
-
-      expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
-      expect(sign.from).toEqual(eoa.address.toLowerCase() as any)
-
-      const signature = await eoa.signTypedData(sign.typedData)
-      expect(execute1.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
-      expect(execute1.signature).toBe(null)
-      const transaction1 = {
-        to: execute1.safe,
-        data: encodeExecTransaction({
-          ...execute1,
-          signature,
-        }),
-      }
+      let [execute] = plan as [ExecuteTransactionAction]
 
       await expect(await testClient.getBalance({ address: receiver })).toEqual(
         0n
       )
       await testClient.sendTransaction({
-        account: deployer,
-        ...transaction1,
+        account: eoa,
+        ...execute.transaction,
       })
-      expect(await testClient.getBalance({ address: receiver })).toEqual(0n)
 
-      expect(execute2.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
-      expect(execute2.signature).not.toBe(null)
-      const transaction2 = {
-        to: execute2.safe,
-        data: encodeExecTransaction(execute2),
-      }
-
-      // Except the receiver to have 0, and afterwards 1
-      expect(await testClient.getBalance({ address: receiver })).toEqual(0n)
-      await testClient.sendTransaction({
-        account: deployer,
-        ...transaction2,
-      })
-      expect(await testClient.getBalance({ address: receiver })).toEqual(
-        parseEther('1')
-      )
+      expect(await testClient.getBalance({ address: receiver })).toEqual(SENT)
     })
   })
 
@@ -437,6 +383,7 @@ describe('plan', () => {
         eoa.address,
         [deployer.address, parseEther('2')],
         [someoneelse.address, parseEther('1')],
+        [safe2, parseEther('2')],
       ])
 
       // enable safe1 on safe2
@@ -451,8 +398,6 @@ describe('plan', () => {
         s1: safe1,
         s2: safe2,
       })
-
-      await fund([[safe2, parseEther('2')]])
 
       const chainId = testClient.chain.id
 
@@ -471,8 +416,6 @@ describe('plan', () => {
           [withPrefix(safe2)]: { nonce: 'override' as NonceConfig },
         },
       })
-
-      expect(plan).toHaveLength(2)
 
       expect(
         await testClient.getBalance({ address: receiver.address })
@@ -504,17 +447,11 @@ describe('plan', () => {
         creationNonce: BigInt(randomHash()),
       })
 
-      await testClient.sendTransaction({
-        account: deployer,
-        to: someoneelse.address,
-        value: parseEther('1'),
-      })
-
-      await testClient.sendTransaction({
-        account: deployer,
-        to: safe2,
-        value: parseEther('2'),
-      })
+      await fund([
+        eoa.address,
+        [someoneelse.address, parseEther('1')],
+        [safe2, parseEther('2')],
+      ])
 
       // enable safe1 on safe2
       await enableModuleInSafe({
@@ -529,14 +466,9 @@ describe('plan', () => {
         s2: safe2,
       })
 
-      // fund the safe with 2 eth
-      await testClient.sendTransaction({
-        account: deployer,
-        to: safe2,
-        value: parseEther('2'),
-      })
-
       const chainId = testClient.chain.id
+
+      const SENT = parseEther('0.0023832094580394')
 
       // plan a transfer of 1 eth into receiver
       const plan = await planExecution(
@@ -544,7 +476,7 @@ describe('plan', () => {
           {
             data: '0x',
             to: normalize(receiver.address),
-            value: parseEther('1'),
+            value: SENT,
             operation: OperationType.Call,
           },
         ],
@@ -558,35 +490,20 @@ describe('plan', () => {
         }
       )
 
-      expect(plan).toHaveLength(2)
+      expect(plan).toHaveLength(1)
 
-      const [sign, execute] = plan as [
-        SignTypedDataAction,
-        SafeTransactionAction,
-      ]
-
-      expect(sign.type).toEqual(ExecutionActionType.SIGN_TYPED_DATA)
-      expect(sign.from).toEqual(eoa.address.toLowerCase() as any)
-
-      const signature = await eoa.signTypedData(sign.typedData)
-
-      expect(execute.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
-      expect(execute.signature).toBe(null)
-      const transaction = {
-        to: execute.safe,
-        data: await encodeExecTransaction({ ...execute, signature }),
-      }
+      const [execute] = plan as [ExecuteTransactionAction]
 
       expect(
         await testClient.getBalance({ address: receiver.address })
       ).toEqual(0n)
       await testClient.sendTransaction({
-        account: deployer,
-        ...transaction,
+        account: eoa,
+        ...execute.transaction,
       })
       expect(
         await testClient.getBalance({ address: receiver.address })
-      ).toEqual(parseEther('1'))
+      ).toEqual(SENT)
     })
   })
 
@@ -996,8 +913,6 @@ describe('plan', () => {
         await testClient.getBalance({ address: receiver.address })
       ).toEqual(0n)
 
-      expect(plan).toHaveLength(2)
-
       const state: any[] = []
       await execute(plan, state, testClient as Eip1193Provider, {
         getWalletClient: (({ account }: any) => {
@@ -1007,7 +922,7 @@ describe('plan', () => {
           return testClientWithAccount(someone)
         }) as any,
       })
-      expect(state).toHaveLength(2)
+      expect(state).toHaveLength(1)
 
       expect(await testClient.getBalance({ address: safe2 })).toEqual(
         parseEther('1') - parseEther('0.123')
@@ -1060,10 +975,12 @@ describe('plan', () => {
         safe2,
       })
 
+      const SENT = parseEther('0.00123')
+
       const transaction: MetaTransactionRequest = {
         data: '0x',
         to: normalize(receiver.address),
-        value: parseEther('0.123'),
+        value: SENT,
         operation: OperationType.Call,
       }
 
@@ -1075,15 +992,8 @@ describe('plan', () => {
         },
       })
 
-      expect(plan).toHaveLength(2)
-
-      const [execute1, execute2] = plan as [
-        ExecuteTransactionAction,
-        SafeTransactionAction,
-      ]
-      expect(execute1.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
-      expect(execute2.type).toEqual(ExecutionActionType.SAFE_TRANSACTION)
-      expect(execute2.signature).not.toBe(null)
+      const [execute] = plan as [ExecuteTransactionAction]
+      expect(execute.type).toEqual(ExecutionActionType.EXECUTE_TRANSACTION)
 
       expect(await testClient.getBalance({ address: safe2 })).toEqual(
         parseEther('1')
@@ -1094,24 +1004,15 @@ describe('plan', () => {
 
       await testClient.sendTransaction({
         account: member,
-        ...execute1.transaction,
-      })
-
-      await testClient.sendTransaction({
-        account: someone,
-        to: execute2.safe,
-        data: encodeExecTransaction({
-          safeTransaction: execute2.safeTransaction,
-          signature: execute2.signature as any,
-        }),
+        ...execute.transaction,
       })
 
       expect(await testClient.getBalance({ address: safe2 })).toEqual(
-        parseEther('1') - parseEther('0.123')
+        parseEther('1') - SENT
       )
       expect(
         await testClient.getBalance({ address: receiver.address })
-      ).toEqual(parseEther('0.123'))
+      ).toEqual(SENT)
     })
   })
 
