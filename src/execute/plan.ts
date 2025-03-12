@@ -343,9 +343,8 @@ const planAsRoles = async (
     left != null &&
     'connection' in waypoint &&
     waypoint.connection.type == ConnectionType.IS_MEMBER
-  if (!validUpstream) {
-    throw new Error(`Invalid Roles upstream relationship`)
-  }
+  invariant(validUpstream, 'Invalid Roles upstream relationship')
+
   invariant(
     waypoint.connection.type == ConnectionType.IS_MEMBER,
     `Expected connection type to be "${ConnectionType.IS_MEMBER}" but got "${waypoint.connection.type}"`
@@ -355,15 +354,14 @@ const planAsRoles = async (
     right?.connection.type == ConnectionType.IS_ENABLED &&
     (right?.account.type == AccountType.SAFE ||
       right?.account.type == AccountType.DELAY)
-  if (!validDownstream) {
-    throw new Error(`Invalid Roles downstream relationship`)
-  }
+  invariant(validDownstream, 'Invalid Roles downstream relationship')
 
   const version = waypoint.account.version
   const role =
     options?.roles?.[waypoint.connection.from] ||
     waypoint.connection.defaultRole ||
     waypoint.connection.roles[0]
+  invariant(role != null, 'No role available')
 
   const transaction = unwrapExecuteTransaction(
     request as ExecuteTransactionAction
