@@ -1,9 +1,8 @@
 import { describe, it, expect, mock } from 'bun:test'
 
 import { checkPermissions } from './checkPermissions'
-import { AccountType, MetaTransactionRequest, Route } from '../types'
+import { MetaTransactionRequest, Route } from '../types'
 import { PermissionViolation } from './checkPermissions'
-import { anvilUrl } from '../../test/client'
 import { RpcRequestError } from 'viem'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
 
@@ -166,7 +165,7 @@ describe('checkPermissions', () => {
   })
 
   it('return true if the transaction reverts for some other reason', async () => {
-    const forbidden: MetaTransactionRequest = {
+    const tx: MetaTransactionRequest = {
       to: '0x1234567812345678123456781234567812345678',
       data: '0x12345678',
       value: BigInt(0),
@@ -177,7 +176,7 @@ describe('checkPermissions', () => {
         new RpcRequestError({
           error: {
             code: -32015,
-            data: undefined,
+            data: undefined, // no revert reason
             message: 'RPC Request failed.',
           },
           url: 'mock-provider',
@@ -186,7 +185,7 @@ describe('checkPermissions', () => {
       ),
     } as Eip1193Provider
 
-    const result = await checkPermissions([forbidden], route, {
+    const result = await checkPermissions([tx], route, {
       providers: {
         1: mockProvider,
       },

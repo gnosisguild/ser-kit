@@ -123,11 +123,19 @@ const decodeRolesError = (error: unknown): PermissionViolation | undefined => {
     throw error
   }
 
-  const rpcError = error as RpcRequestError
-  const data = rpcError.data as `0x${string}`
-  if (!data) return undefined
+  const { data, details } = error as RpcRequestError
+  const revertData = isHexData(data)
+    ? data
+    : isHexData(details)
+      ? details
+      : undefined
 
-  const decodedError = decodeErrorResult({ abi: PERMISSION_CHECK_ERRORS, data })
+  if (!revertData) return undefined
+
+  const decodedError = decodeErrorResult({
+    abi: PERMISSION_CHECK_ERRORS,
+    data: revertData,
+  })
   if (decodedError.errorName === 'ConditionViolation') {
     const [status] = decodedError.args
     invariant(
@@ -147,6 +155,10 @@ const decodeRolesError = (error: unknown): PermissionViolation | undefined => {
   }
 
   return undefined
+}
+
+const isHexData = (data: unknown): data is `0x${string}` => {
+  return typeof data === 'string' && data.startsWith('0x')
 }
 
 export enum PermissionViolation {
