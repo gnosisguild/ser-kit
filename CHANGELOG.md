@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.1](https://github.com/gnosisguild/ser-kit/compare/v3.4.0...v3.4.1) (2025-03-14)
+
+
+### Bug Fixes
+
+* in some cases revert data was not detected in permission check ([#60](https://github.com/gnosisguild/ser-kit/issues/60)) ([22106a2](https://github.com/gnosisguild/ser-kit/commit/22106a2bd3dd2b5446191e5843f7927aa747d1f3))
+
 ## [3.4.0](https://github.com/gnosisguild/ser-kit/compare/v3.3.0...v3.4.0) (2025-03-14)
 
 
