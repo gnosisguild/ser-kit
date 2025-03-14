@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.4.0](https://github.com/gnosisguild/ser-kit/compare/v3.3.0...v3.4.0) (2025-03-14)
+
+
+### Features
+
+* better error message when trying to execute without a role ([#56](https://github.com/gnosisguild/ser-kit/issues/56)) ([8dbd927](https://github.com/gnosisguild/ser-kit/commit/8dbd927140d376ba97f3370f1627a29b1f2b0bef))
+
+
+### Bug Fixes
+
+* don't throw if permission check reverts without revert data ([#59](https://github.com/gnosisguild/ser-kit/issues/59)) ([80ae6e1](https://github.com/gnosisguild/ser-kit/commit/80ae6e1dc383a6d2780fa674c6406a32044f23e9))
+
 ## [3.3.0](https://github.com/gnosisguild/ser-kit/compare/v3.2.0...v3.3.0) (2025-03-10)
 
 
