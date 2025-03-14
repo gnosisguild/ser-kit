@@ -164,4 +164,34 @@ describe('checkPermissions', () => {
     expect(result.success).toBe(true)
     expect(result.error).toBeUndefined()
   })
+
+  it('return true if the transaction reverts for some other reason', async () => {
+    const forbidden: MetaTransactionRequest = {
+      to: '0x1234567812345678123456781234567812345678',
+      data: '0x12345678',
+      value: BigInt(0),
+    }
+
+    const mockProvider = {
+      request: mock().mockRejectedValue(
+        new RpcRequestError({
+          error: {
+            code: -32015,
+            data: undefined,
+            message: 'RPC Request failed.',
+          },
+          url: 'mock-provider',
+          body: [],
+        })
+      ),
+    } as Eip1193Provider
+
+    const result = await checkPermissions([forbidden], route, {
+      providers: {
+        1: mockProvider,
+      },
+    })
+
+    expect(result.success).toBe(true)
+  })
 })
