@@ -125,11 +125,7 @@ const decodeRolesError = (error: unknown): PermissionViolation | undefined => {
 
   const rpcError = error as RpcRequestError
   const data = rpcError.data as `0x${string}`
-  console.log({ data }, error)
-  // rethrow the error if we cannot extract revert data
-  if (!data || typeof data !== 'string' || !data.startsWith('0x')) {
-    throw error
-  }
+  if (!data) return undefined
 
   const decodedError = decodeErrorResult({ abi: PERMISSION_CHECK_ERRORS, data })
   if (decodedError.errorName === 'ConditionViolation') {
