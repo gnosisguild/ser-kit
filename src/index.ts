@@ -43,3 +43,5 @@ export {
   type Waypoint,
   type Route,
 } from './types'
+
+export { buildRoute } from './build'
