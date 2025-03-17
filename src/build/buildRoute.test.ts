@@ -23,7 +23,6 @@ describe('buildRoute', () => {
         },
         {
           SAFE: '0x14567d9f2918e0ead134a1e57ecb586d9d5796d5',
-          connection: 'IS_ENABLED',
         },
       ]
     )

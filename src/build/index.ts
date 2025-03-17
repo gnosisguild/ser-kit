@@ -50,7 +50,7 @@ export const buildRoute = async (
 
   let previousPrefixedAddress: PrefixedAddress | undefined
   const finalWaypoints = (await Promise.all(
-    waypoints.map((waypoint) => {
+    waypoints.map((waypoint, index) => {
       if ('EOA' in waypoint) {
         const address = waypoint.EOA.toLowerCase() as Address
         const prefixedAddress = prefixAddress(undefined, address)
@@ -85,9 +85,10 @@ export const buildRoute = async (
           connection: {
             from: previousPrefixedAddress,
             type:
-              waypoint.connection === 'OWNS'
-                ? ConnectionType.OWNS
-                : ConnectionType.IS_ENABLED,
+              (waypoint.connection as
+                | ConnectionType.IS_ENABLED
+                | ConnectionType.OWNS) ??
+              defaultSafeConnection(waypoints[index - 1]),
           },
         })
 
@@ -145,5 +146,13 @@ export const buildRoute = async (
     avatar: finalWaypoints[finalWaypoints.length - 1].account.prefixedAddress,
     initiator: finalWaypoints[0].account.prefixedAddress,
     waypoints: finalWaypoints,
+  }
+}
+
+const defaultSafeConnection = (waypoint: WaypointInput | EoaInput) => {
+  if ('DELAY' in waypoint || 'ROLES' in waypoint) {
+    return ConnectionType.IS_ENABLED
+  } else {
+    return ConnectionType.OWNS
   }
 }
