@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.0](https://github.com/gnosisguild/ser-kit/compare/v3.4.1...v3.5.0) (2025-03-17)
+
+
+### Features
+
+* a friendly API for manual route building ([#62](https://github.com/gnosisguild/ser-kit/issues/62)) ([f2fe217](https://github.com/gnosisguild/ser-kit/commit/f2fe21735925cf6c668c13591b4a3dca6cde91d3))
+
 ## [3.4.1](https://github.com/gnosisguild/ser-kit/compare/v3.4.0...v3.4.1) (2025-03-14)
 
 
