@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.5.1](https://github.com/gnosisguild/ser-kit/compare/v3.5.0...v3.5.1) (2025-03-18)
+
+
+### Bug Fixes
+
+* checkPermissions should never throw ([#64](https://github.com/gnosisguild/ser-kit/issues/64)) ([64c476e](https://github.com/gnosisguild/ser-kit/commit/64c476e4914bce50bcf663a3028c56306f09f153))
+
 ## [3.5.0](https://github.com/gnosisguild/ser-kit/compare/v3.4.1...v3.5.0) (2025-03-17)
 
 
