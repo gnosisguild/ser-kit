@@ -132,11 +132,9 @@ const decodeRolesError = (error: unknown): PermissionViolation | undefined => {
 
   if (!revertData) return undefined
 
-  const decodedError = decodeErrorResult({
-    abi: PERMISSION_CHECK_ERRORS,
-    data: revertData,
-  })
-  if (decodedError.errorName === 'ConditionViolation') {
+  const decodedError = tryDecodeErrorResult(revertData)
+
+  if (decodedError && decodedError.errorName === 'ConditionViolation') {
     const [status] = decodedError.args
     invariant(
       status !== ConditionViolationStatus.Ok,
@@ -150,7 +148,7 @@ const decodeRolesError = (error: unknown): PermissionViolation | undefined => {
     return violation as PermissionViolation
   }
 
-  if (decodedError.errorName in PermissionViolation) {
+  if (decodedError && decodedError.errorName in PermissionViolation) {
     return decodedError.errorName as PermissionViolation
   }
 
@@ -159,6 +157,17 @@ const decodeRolesError = (error: unknown): PermissionViolation | undefined => {
 
 const isHexData = (data: unknown): data is `0x${string}` => {
   return typeof data === 'string' && data.startsWith('0x')
+}
+
+const tryDecodeErrorResult = (revertData: `0x${string}`) => {
+  try {
+    return decodeErrorResult({
+      abi: PERMISSION_CHECK_ERRORS,
+      data: revertData,
+    })
+  } catch {
+    return null
+  }
 }
 
 export enum PermissionViolation {
