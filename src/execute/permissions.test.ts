@@ -1,10 +1,92 @@
 import { describe, it, expect, mock } from 'bun:test'
 
-import { checkPermissions } from './checkPermissions'
+import { checkPermissions, determineRole } from './permissions'
 import { MetaTransactionRequest, Route } from '../types'
-import { PermissionViolation } from './checkPermissions'
-import { RpcRequestError } from 'viem'
+import { PermissionViolation } from './permissions'
+import { RpcRequestError, stringToHex } from 'viem'
 import { Eip1193Provider } from '@safe-global/protocol-kit'
+
+describe('determineRole', () => {
+  it('returns null if no role allows the transaction', async () => {
+    const forbidden: MetaTransactionRequest = {
+      to: '0x1234567812345678123456781234567812345678',
+      data: '0x12345678',
+      value: BigInt(0),
+    }
+
+    const mockProvider = {
+      request: mock().mockRejectedValue(
+        new RpcRequestError({
+          error: {
+            code: 3,
+            message: 'execution reverted',
+            data: '0xd0a9bf5800000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000',
+          },
+          url: 'mock-provider',
+          body: [],
+        })
+      ),
+    } as Eip1193Provider
+
+    const result = await determineRole({
+      rolesMod: 'eth:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      member: 'eoa:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      roles: [
+        '0x4d414e4147455200000000000000000000000000000000000000000000000000',
+      ],
+      transaction: forbidden,
+      version: 2,
+      options: {
+        providers: {
+          1: mockProvider,
+        },
+      },
+    })
+
+    expect(result).toBeNull()
+  })
+
+  it('returns the role if the transaction reverts for some other reason', async () => {
+    const tx: MetaTransactionRequest = {
+      to: '0x1234567812345678123456781234567812345678',
+      data: '0x12345678',
+      value: BigInt(0),
+    }
+
+    const mockProvider = {
+      request: mock().mockRejectedValue(
+        new RpcRequestError({
+          error: {
+            code: -32015,
+            data: undefined, // no revert reason
+            message: 'RPC Request failed.',
+          },
+          url: 'mock-provider',
+          body: [],
+        })
+      ),
+    } as Eip1193Provider
+
+    const result = await determineRole({
+      rolesMod: 'eth:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      member: 'eoa:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      roles: [
+        '0x4d414e4147455200000000000000000000000000000000000000000000000000',
+      ],
+      transaction: tx,
+      version: 2,
+      options: {
+        providers: {
+          1: mockProvider,
+        },
+      },
+    })
+
+    expect(result).toBe(
+      '0x4d414e4147455200000000000000000000000000000000000000000000000000'
+    )
+  })
+})
 
 describe('checkPermissions', () => {
   // Gnosis DAO active treasury management route

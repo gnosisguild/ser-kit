@@ -1,18 +1,69 @@
+import { invariant } from '@epic-web/invariant'
+import { Address, decodeErrorResult, Hex, RpcRequestError, toHex } from 'viem'
 import { normalizeRoute } from './normalizeRoute'
 import { planExecution, Options as PlanOptions } from './plan'
 import {
   AccountType,
   MetaTransactionRequest,
   Route,
-  Roles,
   Waypoint,
   StartingPoint,
+  PrefixedAddress,
+  ChainId,
 } from '../types'
-import { unprefixAddress } from '../addresses'
-import { invariant } from '@epic-web/invariant'
+import { splitPrefixedAddress, unprefixAddress } from '../addresses'
 import { ExecutionActionType } from './types'
 import { getEip1193Provider } from './options'
-import { decodeErrorResult, RpcRequestError, toHex } from 'viem'
+import encodeExecTransactionWithRole from '../encode/execTransactionWithRole'
+
+export const determineRole = async ({
+  rolesMod,
+  version,
+  member,
+  roles,
+  transaction,
+  options,
+}: {
+  rolesMod: PrefixedAddress
+  version: 1 | 2
+  member: PrefixedAddress
+  roles: string[]
+  transaction: MetaTransactionRequest
+  options: PlanOptions
+}) => {
+  const [chainId, to] = splitPrefixedAddress(rolesMod)
+  const memberAddress = unprefixAddress(member)
+
+  invariant(chainId, 'Invalid roles mod address')
+
+  try {
+    return await Promise.any(
+      roles.map(async (role) => {
+        await testPermissions({
+          chainId,
+          to,
+          data: encodeExecTransactionWithRole({
+            transaction,
+            role,
+            version,
+          }),
+          from: memberAddress,
+          options,
+        })
+        return role
+      })
+    )
+  } catch (e) {
+    invariant(e instanceof AggregateError, 'Expected AggregateError')
+    invariant(
+      e.errors.every((err) => err instanceof PermissionError),
+      'Unexpected error'
+    )
+
+    // No role allowed the transaction
+    return null
+  }
+}
 
 export const checkPermissions = async (
   transactions: readonly MetaTransactionRequest[],
@@ -63,29 +114,74 @@ export const checkPermissions = async (
     action.type === ExecutionActionType.EXECUTE_TRANSACTION,
     'Expected first action to be EXECUTE_TRANSACTION'
   )
-  const provider = getEip1193Provider({
-    chainId: rolesWaypoint.account.chain,
-    options,
-  })
-  const tx = {
-    ...action.transaction,
-    from: unprefixAddress(roleMemberPrefixedAddress),
-    value: toHex(action.transaction.value),
-  }
 
   try {
-    await provider.request({
-      method: 'eth_estimateGas',
-      params: [tx],
+    await testPermissions({
+      chainId: rolesWaypoint.account.chain,
+      to: action.transaction.to,
+      data: action.transaction.data,
+      from: unprefixAddress(roleMemberPrefixedAddress),
+      options,
     })
   } catch (e) {
-    const rolesError = decodeRolesError(e)
-    if (rolesError) {
-      return { success: false, error: rolesError }
+    if (e instanceof PermissionError) {
+      return { success: false, error: e.violation }
     }
   }
 
   return { success: true, error: undefined }
+}
+
+class PermissionError extends Error {
+  constructor(public readonly violation: PermissionViolation) {
+    super(`Permission violation: ${violation}`)
+    this.name = 'PermissionError'
+  }
+}
+
+/**
+ * Simulate a call to the Roles mod. Return true if the transaction is allowed.
+ * @throws a PermissionError if the transaction is not allowed
+ **/
+const testPermissions = async ({
+  chainId,
+  to,
+  data,
+  from,
+  options,
+}: {
+  chainId: ChainId
+  to: Address
+  data: Hex
+  from: Address
+  options: PlanOptions
+}) => {
+  const provider = getEip1193Provider({
+    chainId,
+    options,
+  })
+
+  try {
+    await provider.request({
+      method: 'eth_estimateGas',
+      params: [
+        {
+          to,
+          data,
+          from,
+          value: toHex(0),
+        },
+      ],
+    })
+  } catch (e) {
+    const rolesError = decodeRolesError(e)
+    if (rolesError) {
+      throw new PermissionError(rolesError)
+    }
+  }
+
+  // signal success
+  return true
 }
 
 /** Override the nonce for all safes in the route to 1 so we save unnecessary nonce fetches from the Safe TX service or RPC */
