@@ -193,4 +193,34 @@ describe('checkPermissions', () => {
 
     expect(result.success).toBe(true)
   })
+
+  it('returns success if the module transaction transaction reverts', async () => {
+    const allowed: MetaTransactionRequest = {
+      to: '0x1234567812345678123456781234567812345678',
+      data: '0x12345678',
+      value: BigInt(0),
+    }
+
+    const mockProvider = {
+      request: mock().mockRejectedValue(
+        new RpcRequestError({
+          error: {
+            code: 3,
+            message: 'execution reverted',
+            data: '0xd27b44a900000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000',
+          },
+          url: 'mock-provider',
+          body: [],
+        })
+      ),
+    } as Eip1193Provider
+
+    const result = await checkPermissions([allowed], route, {
+      providers: {
+        1: mockProvider,
+      },
+    })
+
+    expect(result.success).toBe(true)
+  })
 })
