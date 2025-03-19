@@ -45,9 +45,10 @@ import {
   type Route,
   type Waypoint,
 } from '../types'
+import { determineRole } from './permissions'
 
 export interface Options {
-  /** Allows specifying which role to choose at any Roles node in the route in case multiple roles are available. */
+  /** Allows specifying which role to choose at any Roles node in the route. If not provided, it will perform permission checks and use an appropriate role. */
   roles?: { [rolesMod: PrefixedAddress]: string }
   /** Allows overriding the default transaction properties for any Safe node in the route that is connected through an OWNS connection. */
   safeTransactionProperties?: {
@@ -356,16 +357,39 @@ const planAsRoles = async (
       right?.account.type == AccountType.DELAY)
   invariant(validDownstream, 'Invalid Roles downstream relationship')
 
-  const version = waypoint.account.version
-  const role =
-    options?.roles?.[waypoint.connection.from] ||
-    waypoint.connection.defaultRole ||
-    waypoint.connection.roles[0]
-  invariant(role != null, 'No role available')
-
   const transaction = unwrapExecuteTransaction(
     request as ExecuteTransactionAction
   )
+
+  const version = waypoint.account.version
+
+  // determine the role to use:
+  // 1. use the role specified in the options
+  // 2. use the role specified in the connection if there is only one role
+  // 3. determine the role by doing permission checks
+  // 4. use the default role
+  // 5. use the first role if all else fails
+  let role =
+    options?.roles?.[waypoint.connection.from] ||
+    (waypoint.connection.roles.length === 1
+      ? waypoint.connection.roles[0]
+      : null)
+  if (role == null) {
+    role = await determineRole({
+      rolesMod: waypoint.account.prefixedAddress,
+      member: waypoint.connection.from,
+      roles: waypoint.connection.roles,
+      transaction,
+      options,
+      version: waypoint.account.version,
+    })
+  }
+  if (role == null) {
+    role =
+      waypoint.connection.defaultRole || waypoint.connection.roles[0] || null
+  }
+
+  invariant(role != null, 'No role available')
 
   return [
     {
