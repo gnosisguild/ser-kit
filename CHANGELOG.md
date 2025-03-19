@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.6.0](https://github.com/gnosisguild/ser-kit/compare/v3.5.1...v3.6.0) (2025-03-19)
+
+
+### Features
+
+* determine allowing role if there are multiple candidates in `planExecution` ([#67](https://github.com/gnosisguild/ser-kit/issues/67)) ([936e090](https://github.com/gnosisguild/ser-kit/commit/936e09007ea085d243ba3164fc26df07bc04eb7b))
+
 ## [3.5.1](https://github.com/gnosisguild/ser-kit/compare/v3.5.0...v3.5.1) (2025-03-18)
 
 
