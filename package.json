@@ -2,7 +2,7 @@
   "name": "ser-kit",
   "version": "3.6.0",
   "author": "Gnosis Guild",
-  "license": "LGPL-3.0",
+  "license": "UNLICENSED",
   "homepage": "https://github.com/gnosisguild/ser-kit",
   "packageManager": "bun@1.1.12",
   "main": "dist/index.js",
