@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.7.0](https://github.com/gnosisguild/ser-kit/compare/v3.6.0...v3.7.0) (2025-04-15)
+
+
+### Features
+
+* add sonic, celo, berachain support ([#69](https://github.com/gnosisguild/ser-kit/issues/69)) ([dbbaa6d](https://github.com/gnosisguild/ser-kit/commit/dbbaa6d1b285e43b13e92b13c49be1f5e60980aa))
+
 ## [3.6.0](https://github.com/gnosisguild/ser-kit/compare/v3.5.1...v3.6.0) (2025-03-19)
 
 
