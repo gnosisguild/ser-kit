@@ -7,6 +7,9 @@ export const chains = [
   { chainId: 42161, shortName: 'arb1' },
   { chainId: 43114, shortName: 'avax' },
   { chainId: 8453, shortName: 'base' },
+  { chainId: 42220, shortName: 'celo' },
+  { chainId: 146, shortName: 'sonic' },
+  { chainId: 80094, shortName: 'berachain' },
 ] as const
 
 export const defaultRpc = {
@@ -18,4 +21,7 @@ export const defaultRpc = {
   [42161]: 'https://airlock.gnosisguild.org/api/v1/42161/rpc',
   [43114]: 'https://airlock.gnosisguild.org/api/v1/43114/rpc',
   [11155111]: 'https://airlock.gnosisguild.org/api/v1/11155111/rpc',
+  [42220]: 'https://airlock.gnosisguild.org/api/v1/42220/rpc',
+  [80094]: 'https://airlock.gnosisguild.org/api/v1/80094/rpc',
+  [146]: 'https://airlock.gnosisguild.org/api/v1/146/rpc',
 } as const
