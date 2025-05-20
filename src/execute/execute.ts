@@ -20,6 +20,7 @@ import {
   type ExecutionState,
 } from './types'
 import type { Address, ChainId } from '../types'
+import { initApiKit } from '../safeApi'
 
 /**
  * Executes the given plan, continuing from the given state. Mutates the state array to track execution progress.
@@ -140,17 +141,6 @@ export const execute = async (
       }
     }
   }
-}
-
-// TODO: remove this once https://github.com/safe-global/safe-core-sdk/issues/514 is closed
-const initApiKit = (chainId: ChainId) => {
-  // @ts-expect-error SafeApiKit is only available as a CJS module. That doesn't play super nice with us being ESM.
-  if (SafeApiKit.default) {
-    // @ts-expect-error See above
-    return new SafeApiKit.default({ chainId: BigInt(chainId) })
-  }
-
-  return new SafeApiKit({ chainId: BigInt(chainId) })
 }
 
 const _getWalletClient = ({

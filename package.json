@@ -37,10 +37,10 @@
   },
   "dependencies": {
     "@epic-web/invariant": "1.0.0",
-    "@safe-global/api-kit": "^2.5.7",
-    "@safe-global/protocol-kit": "^5.2.0",
-    "@safe-global/safe-deployments": "^1.37.26",
-    "@safe-global/types-kit": "^1.0.1",
+    "@safe-global/api-kit": "^3.0.1",
+    "@safe-global/protocol-kit": "^6.0.4",
+    "@safe-global/safe-deployments": "^1.37.32",
+    "@safe-global/types-kit": "^2.0.1",
     "viem": "^2.22.17"
   }
 }
