@@ -25,3 +25,9 @@ export const defaultRpc = {
   [80094]: 'https://airlock.gnosisguild.org/api/v1/80094/rpc',
   [146]: 'https://airlock.gnosisguild.org/api/v1/146/rpc',
 } as const
+
+// Safe SDK sometimes is not up-to-date with transaction service urls. In that case we have to supply them manually.
+export const safeTransactionServiceUrls = {
+  [146]: 'https://safe-transaction-sonic.safe.global/api',
+  [80094]: 'https://safe-transaction-berachain.safe.global/api',
+} as const
