@@ -12,6 +12,7 @@ import {
   MetaTransactionRequest,
   SafeTransactionRequest,
 } from '../types'
+import { initApiKit } from '../safeApi'
 
 export async function prepareSafeTransaction({
   chainId,
@@ -109,18 +110,7 @@ async function fetchQueueNonce({
 }): Promise<number> {
   const apiKit = initApiKit(chainId)
 
-  const nonce = await apiKit.getNextNonce(getAddress(safe))
+  const nonce = parseInt(await apiKit.getNextNonce(getAddress(safe)))
 
   return nonce
-}
-
-// TODO: remove this once https://github.com/safe-global/safe-core-sdk/issues/514 is closed
-const initApiKit = (chainId: ChainId): SafeApiKit => {
-  // @ts-expect-error SafeApiKit is only available as a CJS module. That doesn't play super nice with us being ESM.
-  if (SafeApiKit.default) {
-    // @ts-expect-error See above
-    return new SafeApiKit.default({ chainId: BigInt(chainId) })
-  }
-
-  return new SafeApiKit({ chainId: BigInt(chainId) })
 }
