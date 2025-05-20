@@ -33,11 +33,11 @@ export function getEip1193Provider({
     options && options.providers && options.providers[chainId]
   )
 
-  let urlOrProvider
+  let urlOrProvider: string | Eip1193Provider
   if (passedIn) {
     urlOrProvider = options!.providers![chainId]!
   } else {
-    urlOrProvider = defaultRpc[chainId]!
+    urlOrProvider = defaultRpc[chainId]
   }
 
   if (typeof urlOrProvider == 'string') {
