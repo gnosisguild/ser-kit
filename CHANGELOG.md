@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.8.0](https://github.com/gnosisguild/ser-kit/compare/v3.7.0...v3.8.0) (2025-05-20)
+
+
+### Features
+
+* add support for more chains ([#72](https://github.com/gnosisguild/ser-kit/issues/72)) ([3c7f51d](https://github.com/gnosisguild/ser-kit/commit/3c7f51d1d40511ad2e982b1fb12a354c79fcc191))
+
 ## [3.7.0](https://github.com/gnosisguild/ser-kit/compare/v3.6.0...v3.7.0) (2025-04-15)
 
 
