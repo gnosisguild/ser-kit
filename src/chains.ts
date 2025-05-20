@@ -10,6 +10,9 @@ export const chains = [
   { chainId: 42220, shortName: 'celo' },
   { chainId: 146, shortName: 'sonic' },
   { chainId: 80094, shortName: 'berachain' },
+  { chainId: 130, shortName: 'unichain' },
+  { chainId: 480, shortName: 'wc' },
+  { chainId: 60808, shortName: 'bob' },
 ] as const
 
 export const defaultRpc = {
@@ -24,10 +27,14 @@ export const defaultRpc = {
   [42220]: 'https://airlock.gnosisguild.org/api/v1/42220/rpc',
   [80094]: 'https://airlock.gnosisguild.org/api/v1/80094/rpc',
   [146]: 'https://airlock.gnosisguild.org/api/v1/146/rpc',
+  [130]: 'https://mainnet.unichain.org',
+  [480]: 'https://worldchain-mainnet.g.alchemy.com/public',
+  [60808]: 'https://rpc.gobob.xyz',
 } as const
 
 // Safe SDK sometimes is not up-to-date with transaction service urls. In that case we have to supply them manually.
 export const safeTransactionServiceUrls = {
   [146]: 'https://safe-transaction-sonic.safe.global/api',
   [80094]: 'https://safe-transaction-berachain.safe.global/api',
+  [60808]: 'https://transaction.safe.gobob.xyz/api',
 } as const
