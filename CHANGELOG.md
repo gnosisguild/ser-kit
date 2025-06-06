@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.9.0](https://github.com/gnosisguild/ser-kit/compare/v3.8.0...v3.9.0) (2025-06-06)
+
+
+### Features
+
+* Add mantle support ([#74](https://github.com/gnosisguild/ser-kit/issues/74)) ([aa6c264](https://github.com/gnosisguild/ser-kit/commit/aa6c264ebb4fd62bb72dd52743db321e6d5c7491))
+
 ## [3.8.0](https://github.com/gnosisguild/ser-kit/compare/v3.7.0...v3.8.0) (2025-05-20)
 
 
