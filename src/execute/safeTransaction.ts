@@ -1,6 +1,5 @@
 import { invariant } from '@epic-web/invariant'
 import { encodeFunctionData, getAddress, parseAbi, zeroAddress } from 'viem'
-import SafeApiKit from '@safe-global/api-kit'
 import { OperationType } from '@safe-global/types-kit'
 
 import { prefixAddress } from '../addresses'
