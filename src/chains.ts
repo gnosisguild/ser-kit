@@ -13,6 +13,7 @@ export const chains = [
   { chainId: 130, shortName: 'unichain' },
   { chainId: 480, shortName: 'wc' },
   { chainId: 60808, shortName: 'bob' },
+  { chainId: 5000, shortName: 'mantle' },
 ] as const
 
 export const defaultRpc = {
@@ -30,6 +31,7 @@ export const defaultRpc = {
   [130]: 'https://mainnet.unichain.org',
   [480]: 'https://worldchain-mainnet.g.alchemy.com/public',
   [60808]: 'https://rpc.gobob.xyz',
+  [5000]: 'https://1rpc.io/mantle',
 } as const
 
 // Safe SDK sometimes is not up-to-date with transaction service urls. In that case we have to supply them manually.
@@ -37,10 +39,4 @@ export const safeTransactionServiceUrls = {
   [146]: 'https://safe-transaction-sonic.safe.global/api',
   [80094]: 'https://safe-transaction-berachain.safe.global/api',
   [60808]: 'https://transaction.safe.gobob.xyz/api',
-} as const
-
-// Safe SDK sometimes is not up-to-date with transaction service urls. In that case we have to supply them manually.
-export const safeTransactionServiceUrls = {
-  [146]: 'https://safe-transaction-sonic.safe.global/api',
-  [80094]: 'https://safe-transaction-berachain.safe.global/api',
 } as const
