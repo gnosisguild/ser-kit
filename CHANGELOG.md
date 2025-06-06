@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.9.1](https://github.com/gnosisguild/ser-kit/compare/v3.9.0...v3.9.1) (2025-06-06)
+
+
+### Bug Fixes
+
+* use MultiSendCallOnly if `operation` field is not set ([#76](https://github.com/gnosisguild/ser-kit/issues/76)) ([6acd39d](https://github.com/gnosisguild/ser-kit/commit/6acd39d1fe1313b6cf22fa4f43cf1acd36d35278))
+
 ## [3.9.0](https://github.com/gnosisguild/ser-kit/compare/v3.8.0...v3.9.0) (2025-06-06)
 
 
