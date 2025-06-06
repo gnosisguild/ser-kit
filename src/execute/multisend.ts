@@ -83,7 +83,7 @@ const multiSendAddress = (
   preferredAddresses: Address[] = []
 ): Address => {
   const callOnly = transactions.every(
-    (tx) => tx.operation === OperationType.Call
+    (tx) => tx.operation == null || tx.operation === OperationType.Call
   )
 
   const preferredAddress: Address | undefined =
